@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server'
-import { getUserByEmail, verifyPassword, generateToken } from '@/lib/auth.js'
-import Joi from 'joi'
+const { NextResponse } = require('next/server')
+const { getUserByEmail, verifyPassword, generateToken } = require('@/lib/auth.js')
+const Joi = require('joi')
 
 // Validation schema
 const loginSchema = Joi.object({
@@ -8,7 +8,7 @@ const loginSchema = Joi.object({
   password: Joi.string().min(6).required()
 })
 
-export async function POST(request) {
+async function POST(request) {
   try {
     const body = await request.json()
     
@@ -43,15 +43,30 @@ export async function POST(request) {
     }
     
     // Generate JWT token
-    const token = generateToken(user)
+    const token = await generateToken(user)
     
     // Prepare user data (exclude password)
+    let permissions = []
+    try {
+      // Check if permissions is already an array or needs parsing
+      if (typeof user.permissions === 'string') {
+        permissions = JSON.parse(user.permissions || '[]')
+      } else if (Array.isArray(user.permissions)) {
+        permissions = user.permissions
+      } else {
+        permissions = []
+      }
+    } catch (error) {
+      console.error('Error parsing permissions in login:', user.permissions, error)
+      permissions = []
+    }
+    
     const userData = {
       id: user.id,
       name: user.name,
       email: user.email,
       role: user.role,
-      permissions: JSON.parse(user.permissions || '[]'),
+      permissions: permissions,
       avatar: user.avatar,
       isSuperUser: user.role === 'super',
       canManageUsers: ['super', 'admin'].includes(user.role),
@@ -77,3 +92,5 @@ export async function POST(request) {
     }, { status: 500 })
   }
 }
+
+module.exports = { POST }

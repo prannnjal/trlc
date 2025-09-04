@@ -100,12 +100,14 @@ async function createTables() {
         name VARCHAR(100) NOT NULL,
         email VARCHAR(255) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
-        role ENUM('super', 'admin', 'sales') NOT NULL DEFAULT 'sales',
+        role ENUM('super', 'admin', 'caller') NOT NULL DEFAULT 'caller',
         permissions JSON DEFAULT ('[]'),
         avatar VARCHAR(500),
+        created_by INT,
         is_active BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
         INDEX idx_email (email),
         INDEX idx_role (role),
         INDEX idx_is_active (is_active)
@@ -327,7 +329,7 @@ async function seedDatabase() {
       return;
     }
     
-    // Create default users
+    // Create default users with hierarchy
     const users = [
       {
         name: 'Super Administrator',
@@ -335,31 +337,92 @@ async function seedDatabase() {
         password: await bcrypt.hash('super123', 12),
         role: 'super',
         permissions: JSON.stringify(['all', 'super_admin', 'system_config', 'user_management', 'data_export', 'api_access', 'audit_logs']),
-        avatar: 'https://ui-avatars.com/api/?name=Super&background=dc2626&color=fff'
-      },
-      {
-        name: 'Admin User',
-        email: 'admin@travelcrm.com',
-        password: await bcrypt.hash('admin123', 12),
-        role: 'admin',
-        permissions: JSON.stringify(['all']),
-        avatar: 'https://ui-avatars.com/api/?name=Admin&background=3b82f6&color=fff'
-      },
-      {
-        name: 'Sales User',
-        email: 'sales@travelcrm.com',
-        password: await bcrypt.hash('sales123', 12),
-        role: 'sales',
-        permissions: JSON.stringify(['leads', 'quotes', 'bookings', 'reports']),
-        avatar: 'https://ui-avatars.com/api/?name=Sales&background=10b981&color=fff'
+        avatar: 'https://ui-avatars.com/api/?name=Super&background=dc2626&color=fff',
+        created_by: null // Super user is not created by anyone
       }
     ];
     
-    for (const user of users) {
+    // Insert super user first
+    await pool.execute(`
+      INSERT INTO users (name, email, password, role, permissions, avatar, created_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `, [users[0].name, users[0].email, users[0].password, users[0].role, users[0].permissions, users[0].avatar, users[0].created_by]);
+    
+    // Get the super user ID
+    const [superUserResult] = await pool.execute('SELECT id FROM users WHERE email = ?', ['super@travelcrm.com']);
+    const superUserId = superUserResult[0].id;
+    
+    // Create admin users (created by super user)
+    const adminUsers = [
+      {
+        name: 'Admin User 1',
+        email: 'admin1@travelcrm.com',
+        password: await bcrypt.hash('admin123', 12),
+        role: 'admin',
+        permissions: JSON.stringify(['leads', 'quotes', 'bookings', 'reports', 'user_management']),
+        avatar: 'https://ui-avatars.com/api/?name=Admin1&background=3b82f6&color=fff',
+        created_by: superUserId
+      },
+      {
+        name: 'Admin User 2',
+        email: 'admin2@travelcrm.com',
+        password: await bcrypt.hash('admin123', 12),
+        role: 'admin',
+        permissions: JSON.stringify(['leads', 'quotes', 'bookings', 'reports', 'user_management']),
+        avatar: 'https://ui-avatars.com/api/?name=Admin2&background=3b82f6&color=fff',
+        created_by: superUserId
+      }
+    ];
+    
+    for (const admin of adminUsers) {
       await pool.execute(`
-        INSERT INTO users (name, email, password, role, permissions, avatar)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `, [user.name, user.email, user.password, user.role, user.permissions, user.avatar]);
+        INSERT INTO users (name, email, password, role, permissions, avatar, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `, [admin.name, admin.email, admin.password, admin.role, admin.permissions, admin.avatar, admin.created_by]);
+    }
+    
+    // Get admin user IDs
+    const [admin1Result] = await pool.execute('SELECT id FROM users WHERE email = ?', ['admin1@travelcrm.com']);
+    const [admin2Result] = await pool.execute('SELECT id FROM users WHERE email = ?', ['admin2@travelcrm.com']);
+    const admin1Id = admin1Result[0].id;
+    const admin2Id = admin2Result[0].id;
+    
+    // Create caller users (created by admin users)
+    const callerUsers = [
+      {
+        name: 'Caller User 1',
+        email: 'caller1@travelcrm.com',
+        password: await bcrypt.hash('caller123', 12),
+        role: 'caller',
+        permissions: JSON.stringify(['leads', 'quotes', 'bookings']),
+        avatar: 'https://ui-avatars.com/api/?name=Caller1&background=10b981&color=fff',
+        created_by: admin1Id
+      },
+      {
+        name: 'Caller User 2',
+        email: 'caller2@travelcrm.com',
+        password: await bcrypt.hash('caller123', 12),
+        role: 'caller',
+        permissions: JSON.stringify(['leads', 'quotes', 'bookings']),
+        avatar: 'https://ui-avatars.com/api/?name=Caller2&background=10b981&color=fff',
+        created_by: admin1Id
+      },
+      {
+        name: 'Caller User 3',
+        email: 'caller3@travelcrm.com',
+        password: await bcrypt.hash('caller123', 12),
+        role: 'caller',
+        permissions: JSON.stringify(['leads', 'quotes', 'bookings']),
+        avatar: 'https://ui-avatars.com/api/?name=Caller3&background=10b981&color=fff',
+        created_by: admin2Id
+      }
+    ];
+    
+    for (const caller of callerUsers) {
+      await pool.execute(`
+        INSERT INTO users (name, email, password, role, permissions, avatar, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `, [caller.name, caller.email, caller.password, caller.role, caller.permissions, caller.avatar, caller.created_by]);
     }
     
     console.log('✅ Users created');
@@ -740,8 +803,13 @@ async function initializeDatabase() {
     console.log('🎉 Database initialization completed!');
     console.log('\n📋 Default Login Credentials:');
     console.log('Super User: super@travelcrm.com / super123');
-    console.log('Admin User: admin@travelcrm.com / admin123');
-    console.log('Sales User: sales@travelcrm.com / sales123');
+    console.log('Admin User 1: admin1@travelcrm.com / admin123');
+    console.log('Admin User 2: admin2@travelcrm.com / admin123');
+    console.log('Caller User 1: caller1@travelcrm.com / caller123');
+    console.log('Caller User 2: caller2@travelcrm.com / caller123');
+    console.log('Caller User 3: caller3@travelcrm.com / caller123');
+    console.log('\n🏗️  User Hierarchy:');
+    console.log('Super User → Admin Users → Caller Users');
     console.log('\n🌐 Start your application with: npm run dev');
     
   } catch (error) {

@@ -1,15 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  images: {
-    domains: ['localhost'],
+  experimental: {
+    appDir: true,
   },
-  webpack: (config) => {
-    config.resolve.fallback = {
-      ...config.resolve.fallback,
-      fs: false,
-    };
-    return config;
+  images: {
+    domains: ['ui-avatars.com'],
   },
 }
 
-export default nextConfig
+module.exports = nextConfig

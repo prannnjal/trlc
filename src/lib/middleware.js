@@ -1,7 +1,7 @@
-import { verifyToken, getUserById } from './auth.js'
+const { verifyToken, getUserById } = require('./auth.js')
 
 // Authentication middleware
-export const authenticate = (req, res, next) => {
+const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization
     
@@ -12,8 +12,8 @@ export const authenticate = (req, res, next) => {
       })
     }
     
-    const token = authHeader.substring(7) // Remove 'Bearer ' prefix
-    const decoded = verifyToken(token)
+    const token = authHeader.substring(7)
+    const decoded = await verifyToken(token)
     
     if (!decoded) {
       return res.status(401).json({ 
@@ -22,9 +22,8 @@ export const authenticate = (req, res, next) => {
       })
     }
     
-    // Get fresh user data from database
+    // Get user from database
     const user = await getUserById(decoded.id)
-    
     if (!user) {
       return res.status(401).json({ 
         success: false, 
@@ -32,102 +31,132 @@ export const authenticate = (req, res, next) => {
       })
     }
     
-    req.user = {
-      ...user,
-      permissions: JSON.parse(user.permissions || '[]')
+    if (!user.is_active) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Account is deactivated.' 
+      })
     }
     
+    req.user = user
     next()
   } catch (error) {
     console.error('Authentication error:', error)
     return res.status(500).json({ 
       success: false, 
-      message: 'Internal server error.' 
+      message: 'Internal server error' 
     })
   }
 }
 
-// Authorization middleware
-export const authorize = (permissions = []) => {
-  return (req, res, next) => {
-    if (!req.user) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Authentication required.' 
-      })
-    }
-    
-    // Super users have all permissions
-    if (req.user.role === 'super') {
-      return next()
-    }
-    
-    // Check if user has required permissions
-    const hasRequiredPermissions = permissions.every(permission => 
-      req.user.permissions.includes(permission) || req.user.permissions.includes('all')
-    )
-    
-    if (!hasRequiredPermissions) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Insufficient permissions.' 
-      })
-    }
-    
-    next()
-  }
-}
-
-// Role-based authorization
-export const requireRole = (roles = []) => {
-  return (req, res, next) => {
-    if (!req.user) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Authentication required.' 
-      })
-    }
-    
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Insufficient role privileges.' 
-      })
-    }
-    
-    next()
-  }
-}
-
-// Optional authentication (doesn't fail if no token)
-export const optionalAuth = (req, res, next) => {
+// Optional authentication middleware
+const optionalAuth = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization
     
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7)
-      const decoded = verifyToken(token)
+      const decoded = await verifyToken(token)
       
       if (decoded) {
         const user = await getUserById(decoded.id)
-        if (user) {
-          req.user = {
-            ...user,
-            permissions: JSON.parse(user.permissions || '[]')
-          }
+        if (user && user.is_active) {
+          req.user = user
         }
       }
     }
     
     next()
   } catch (error) {
-    // Continue without authentication
+    console.error('Optional authentication error:', error)
+    next() // Continue without authentication
+  }
+}
+
+// Role-based authorization middleware
+const authorize = (...roles) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Authentication required' 
+      })
+    }
+    
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Insufficient permissions' 
+      })
+    }
+    
     next()
   }
 }
 
-// Rate limiting helper
-export const createRateLimit = (windowMs = 15 * 60 * 1000, max = 100) => {
+// Permission-based authorization middleware
+const requirePermission = (permission) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Authentication required' 
+      })
+    }
+    
+    const userPermissions = req.user.permissions || []
+    
+    if (!userPermissions.includes(permission) && !userPermissions.includes('all')) {
+      return res.status(403).json({ 
+        success: false, 
+        message: `Permission '${permission}' required` 
+      })
+    }
+    
+    next()
+  }
+}
+
+// Super user only middleware
+const superUserOnly = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ 
+      success: false, 
+      message: 'Authentication required' 
+    })
+  }
+  
+  if (req.user.role !== 'super') {
+    return res.status(403).json({ 
+      success: false, 
+      message: 'Super user access required' 
+    })
+  }
+  
+  next()
+}
+
+// Admin or super user middleware
+const adminOrSuper = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ 
+      success: false, 
+      message: 'Authentication required' 
+    })
+  }
+  
+  if (!['admin', 'super'].includes(req.user.role)) {
+    return res.status(403).json({ 
+      success: false, 
+      message: 'Admin or super user access required' 
+    })
+  }
+  
+  next()
+}
+
+// Rate limiting middleware (basic implementation)
+const rateLimit = (windowMs = 15 * 60 * 1000, max = 100) => {
   const requests = new Map()
   
   return (req, res, next) => {
@@ -142,63 +171,105 @@ export const createRateLimit = (windowMs = 15 * 60 * 1000, max = 100) => {
       }
     }
     
-    // Check current requests
-    const userRequests = Array.from(requests.entries())
-      .filter(([key, timestamp]) => key.startsWith(ip) && timestamp > windowStart)
-      .length
+    // Check current request count
+    const requestCount = Array.from(requests.values())
+      .filter(timestamp => timestamp > windowStart).length
     
-    if (userRequests >= max) {
-      return res.status(429).json({
-        success: false,
-        message: 'Too many requests. Please try again later.'
+    if (requestCount >= max) {
+      return res.status(429).json({ 
+        success: false, 
+        message: 'Too many requests, please try again later' 
       })
     }
     
     // Add current request
-    requests.set(`${ip}-${now}`, now)
-    
+    requests.set(ip, now)
     next()
   }
 }
 
-// Validation helper
-export const validateRequest = (schema) => {
+// Request validation middleware
+const validateRequest = (schema) => {
   return (req, res, next) => {
-    const { error } = schema.validate(req.body)
+    const { error, value } = schema.validate(req.body)
     
     if (error) {
-      return res.status(400).json({
-        success: false,
+      return res.status(400).json({ 
+        success: false, 
         message: 'Validation error',
         errors: error.details.map(detail => detail.message)
       })
     }
     
+    req.body = value
     next()
   }
 }
 
-// Error handler
-export const errorHandler = (err, req, res, next) => {
+// Error handling middleware
+const errorHandler = (err, req, res, next) => {
   console.error('Error:', err)
   
   if (err.name === 'ValidationError') {
-    return res.status(400).json({
-      success: false,
+    return res.status(400).json({ 
+      success: false, 
       message: 'Validation error',
-      errors: err.details?.map(detail => detail.message) || [err.message]
+      errors: err.details.map(detail => detail.message)
     })
   }
   
   if (err.name === 'UnauthorizedError') {
-    return res.status(401).json({
-      success: false,
-      message: 'Unauthorized'
+    return res.status(401).json({ 
+      success: false, 
+      message: 'Unauthorized' 
     })
   }
   
-  res.status(500).json({
-    success: false,
-    message: 'Internal server error'
+  if (err.name === 'ForbiddenError') {
+    return res.status(403).json({ 
+      success: false, 
+      message: 'Forbidden' 
+    })
+  }
+  
+  return res.status(500).json({ 
+    success: false, 
+    message: 'Internal server error' 
   })
+}
+
+// CORS middleware
+const cors = (req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*')
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization')
+  
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200)
+  } else {
+    next()
+  }
+}
+
+// Security headers middleware
+const securityHeaders = (req, res, next) => {
+  res.header('X-Content-Type-Options', 'nosniff')
+  res.header('X-Frame-Options', 'DENY')
+  res.header('X-XSS-Protection', '1; mode=block')
+  res.header('Referrer-Policy', 'strict-origin-when-cross-origin')
+  next()
+}
+
+module.exports = {
+  authenticate,
+  optionalAuth,
+  authorize,
+  requirePermission,
+  superUserOnly,
+  adminOrSuper,
+  rateLimit,
+  validateRequest,
+  errorHandler,
+  cors,
+  securityHeaders
 }
