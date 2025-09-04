@@ -25,7 +25,7 @@ export async function POST(request) {
     const { email, password } = value
     
     // Get user from database
-    const user = getUserByEmail(email)
+    const user = await getUserByEmail(email)
     if (!user) {
       return NextResponse.json({
         success: false,

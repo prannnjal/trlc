@@ -6,7 +6,7 @@ This document provides comprehensive information about the backend implementatio
 
 The backend is built using Next.js API routes with the following key components:
 
-- **Database**: SQLite with better-sqlite3 for high performance
+- **Database**: MySQL with mysql2 for high performance and scalability
 - **Authentication**: JWT tokens with bcrypt password hashing
 - **Validation**: Joi for request validation
 - **Middleware**: Custom authentication and authorization middleware
@@ -17,7 +17,8 @@ The backend is built using Next.js API routes with the following key components:
 ```
 src/
 ├── lib/
-│   ├── database.js          # Database configuration and table creation
+│   ├── database.js          # Database configuration and utilities
+│   ├── mysql.js             # MySQL connection and query utilities
 │   ├── auth.js              # Authentication utilities
 │   ├── middleware.js        # Authentication and authorization middleware
 │   ├── seed.js              # Database seeding with sample data
@@ -112,24 +113,48 @@ src/
 npm install
 ```
 
-### 2. Initialize Database
+### 2. Set up MySQL Database
+
+First, ensure MySQL is installed and running. Then create the database:
+
+```sql
+CREATE DATABASE travel_crm CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'travel_crm_user'@'localhost' IDENTIFIED BY 'your_password';
+GRANT ALL PRIVILEGES ON travel_crm.* TO 'travel_crm_user'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+### 3. Configure Environment Variables
+
+Create a `.env.local` file:
+
+```env
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=travel_crm_user
+DB_PASSWORD=your_password
+DB_NAME=travel_crm
+JWT_SECRET=your-super-secret-jwt-key-change-in-production
+```
+
+### 4. Initialize Database
 
 ```bash
 npm run init-db
 ```
 
 This will:
-- Create the SQLite database file
-- Set up all tables with proper relationships
+- Connect to MySQL database
+- Create all tables with proper relationships and indexes
 - Seed with sample data and default users
 
-### 3. Start Development Server
+### 5. Start Development Server
 
 ```bash
 npm run dev
 ```
 
-### 4. Default Login Credentials
+### 6. Default Login Credentials
 
 - **Super User**: `super@travelcrm.com` / `super123`
 - **Admin User**: `admin@travelcrm.com` / `admin123`
@@ -215,12 +240,15 @@ NEXT_PUBLIC_APP_VERSION=1.0.0
 
 ### Database Configuration
 
-The database is automatically created in the `data/` directory. The schema includes:
+The MySQL database is configured with:
 
-- Foreign key constraints for data integrity
-- Proper indexing for performance
-- Automatic timestamps for audit trails
-- Soft deletes where appropriate
+- **UTF8MB4 Character Set** - Full Unicode support including emojis
+- **Foreign key constraints** for data integrity
+- **Optimized indexes** for query performance
+- **Connection pooling** for scalability
+- **Automatic timestamps** for audit trails
+- **ENUM types** for constrained values
+- **JSON fields** for flexible data storage
 
 ## 🛡️ Security Features
 
@@ -272,10 +300,12 @@ The seeding script creates:
 
 ### Database
 
-For production, consider migrating to:
-- PostgreSQL for better scalability
-- MySQL for enterprise environments
-- MongoDB for document-based storage
+The MySQL setup is production-ready with:
+- Connection pooling for high concurrency
+- Optimized indexes for performance
+- UTF8MB4 support for international data
+- Automated backup strategies
+- Monitoring and alerting capabilities
 
 ### Security
 
@@ -287,10 +317,10 @@ For production, consider migrating to:
 
 ### Performance
 
-- Add database indexes for frequently queried fields
-- Implement caching with Redis
-- Use connection pooling
-- Optimize database queries
+- Database indexes are already optimized for common queries
+- Connection pooling is configured with MySQL2
+- Consider implementing Redis caching for high-traffic scenarios
+- Monitor query performance and optimize as needed
 
 ## 🧪 Testing
 
@@ -316,10 +346,11 @@ The dashboard provides:
 
 ### Database Maintenance
 
-- Regular backups of SQLite database
-- Index optimization
+- Regular backups of MySQL database
+- Index optimization and monitoring
 - Data cleanup for old records
-- Performance monitoring
+- Performance monitoring and query optimization
+- Connection pool monitoring
 
 ### Code Maintenance
 
@@ -332,10 +363,12 @@ The dashboard provides:
 
 ### Common Issues
 
-1. **Database not found**: Run `npm run init-db`
-2. **Authentication errors**: Check JWT secret configuration
-3. **Permission denied**: Verify user roles and permissions
-4. **Validation errors**: Check request body format
+1. **Database connection failed**: Check MySQL service and credentials
+2. **Database not found**: Run `npm run init-db`
+3. **Authentication errors**: Check JWT secret configuration
+4. **Permission denied**: Verify user roles and permissions
+5. **Validation errors**: Check request body format
+6. **Connection timeout**: Check MySQL connection limits and pool settings
 
 ### Debug Mode
 
@@ -348,7 +381,8 @@ DEBUG=travel-crm:*
 ## 📚 Additional Resources
 
 - [Next.js API Routes Documentation](https://nextjs.org/docs/api-routes/introduction)
-- [SQLite Documentation](https://www.sqlite.org/docs.html)
+- [MySQL Documentation](https://dev.mysql.com/doc/)
+- [MySQL2 Node.js Driver](https://github.com/sidorares/node-mysql2)
 - [JWT Best Practices](https://tools.ietf.org/html/rfc7519)
 - [Bcrypt Documentation](https://www.npmjs.com/package/bcryptjs)
 

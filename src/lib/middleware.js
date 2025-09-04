@@ -23,7 +23,7 @@ export const authenticate = (req, res, next) => {
     }
     
     // Get fresh user data from database
-    const user = getUserById(decoded.id)
+    const user = await getUserById(decoded.id)
     
     if (!user) {
       return res.status(401).json({ 
@@ -109,7 +109,7 @@ export const optionalAuth = (req, res, next) => {
       const decoded = verifyToken(token)
       
       if (decoded) {
-        const user = getUserById(decoded.id)
+        const user = await getUserById(decoded.id)
         if (user) {
           req.user = {
             ...user,

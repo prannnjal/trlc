@@ -31,7 +31,7 @@ export async function GET(request) {
           return
         }
         
-        const users = getAllUsers()
+        const users = await getAllUsers()
         
         // Remove password from response
         const safeUsers = users.map(user => {

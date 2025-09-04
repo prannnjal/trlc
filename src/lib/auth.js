@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
-import db from './database.js'
+import { query, queryOne, execute } from './mysql.js'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production'
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'
@@ -38,15 +38,13 @@ export const verifyToken = (token) => {
 }
 
 // Get user by email
-export const getUserByEmail = (email) => {
-  const stmt = db.prepare('SELECT * FROM users WHERE email = ? AND is_active = 1')
-  return stmt.get(email)
+export const getUserByEmail = async (email) => {
+  return await queryOne('SELECT * FROM users WHERE email = ? AND is_active = 1', [email])
 }
 
 // Get user by ID
-export const getUserById = (id) => {
-  const stmt = db.prepare('SELECT * FROM users WHERE id = ? AND is_active = 1')
-  return stmt.get(id)
+export const getUserById = async (id) => {
+  return await queryOne('SELECT * FROM users WHERE id = ? AND is_active = 1', [id])
 }
 
 // Create user
@@ -55,15 +53,13 @@ export const createUser = async (userData) => {
   
   const hashedPassword = await hashPassword(password)
   
-  const stmt = db.prepare(`
+  const result = await execute(`
     INSERT INTO users (name, email, password, role, permissions)
     VALUES (?, ?, ?, ?, ?)
-  `)
-  
-  const result = stmt.run(name, email, hashedPassword, role, permissions)
+  `, [name, email, hashedPassword, role, permissions])
   
   return {
-    id: result.lastInsertRowid,
+    id: result.insertId,
     name,
     email,
     role,
@@ -75,7 +71,7 @@ export const createUser = async (userData) => {
 export const updateUser = async (id, userData) => {
   const { name, email, role, permissions, is_active } = userData
   
-  let query = 'UPDATE users SET '
+  let sql = 'UPDATE users SET '
   let params = []
   let setParts = []
   
@@ -105,23 +101,21 @@ export const updateUser = async (id, userData) => {
   }
   
   setParts.push('updated_at = CURRENT_TIMESTAMP')
-  query += setParts.join(', ') + ' WHERE id = ?'
+  sql += setParts.join(', ') + ' WHERE id = ?'
   params.push(id)
   
-  const stmt = db.prepare(query)
-  const result = stmt.run(...params)
+  const result = await execute(sql, params)
   
-  return result.changes > 0
+  return result.affectedRows > 0
 }
 
 // Get all users
-export const getAllUsers = () => {
-  const stmt = db.prepare(`
+export const getAllUsers = async () => {
+  return await query(`
     SELECT id, name, email, role, permissions, avatar, is_active, created_at, updated_at
     FROM users
     ORDER BY created_at DESC
   `)
-  return stmt.all()
 }
 
 // Check if user has permission

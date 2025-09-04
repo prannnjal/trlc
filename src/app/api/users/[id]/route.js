@@ -33,7 +33,7 @@ export async function GET(request, { params }) {
           return
         }
         
-        const user = getUserById(id)
+        const user = await getUserById(id)
         
         if (!user) {
           resolve(NextResponse.json({
@@ -110,7 +110,7 @@ export async function PUT(request, { params }) {
         }
         
         // Check if user exists
-        const existingUser = getUserById(id)
+        const existingUser = await getUserById(id)
         if (!existingUser) {
           resolve(NextResponse.json({
             success: false,
@@ -137,7 +137,7 @@ export async function PUT(request, { params }) {
           }
           
           // Get updated user
-          const updatedUser = getUserById(id)
+          const updatedUser = await getUserById(id)
           const { password, ...safeUser } = updatedUser
           
           resolve(NextResponse.json({
@@ -207,7 +207,7 @@ export async function DELETE(request, { params }) {
         }
         
         // Check if user exists
-        const existingUser = getUserById(id)
+        const existingUser = await getUserById(id)
         if (!existingUser) {
           resolve(NextResponse.json({
             success: false,

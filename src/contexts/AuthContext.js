@@ -18,10 +18,33 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     // Check for existing session
-    const checkAuth = () => {
-      const savedUser = localStorage.getItem('crm_user')
-      if (savedUser) {
-        setUser(JSON.parse(savedUser))
+    const checkAuth = async () => {
+      const token = localStorage.getItem('crm_token')
+      if (token) {
+        try {
+          const response = await fetch('/api/auth/me', {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          })
+          
+          if (response.ok) {
+            const data = await response.json()
+            if (data.success) {
+              setUser(data.data.user)
+            } else {
+              localStorage.removeItem('crm_token')
+              localStorage.removeItem('crm_user')
+            }
+          } else {
+            localStorage.removeItem('crm_token')
+            localStorage.removeItem('crm_user')
+          }
+        } catch (error) {
+          console.error('Auth check failed:', error)
+          localStorage.removeItem('crm_token')
+          localStorage.removeItem('crm_user')
+        }
       }
       setLoading(false)
     }
@@ -30,61 +53,50 @@ export const AuthProvider = ({ children }) => {
   }, [])
 
   const login = async (credentials) => {
-    // Simulate API call with super user support
-    let mockUser
-    
-    if (credentials.email === 'super@travelcrm.com') {
-      mockUser = {
-        id: 0,
-        name: 'Super Administrator',
-        email: credentials.email,
-        role: 'super',
-        permissions: ['all', 'super_admin', 'system_config', 'user_management', 'data_export', 'api_access', 'audit_logs'],
-        avatar: 'https://ui-avatars.com/api/?name=Super&background=dc2626&color=fff',
-        isSuperUser: true,
-        canManageUsers: true,
-        canAccessSystem: true,
-        canExportData: true,
-        canViewAuditLogs: true
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(credentials)
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        const { user, token } = data.data
+        setUser(user)
+        localStorage.setItem('crm_token', token)
+        localStorage.setItem('crm_user', JSON.stringify(user))
+        return { success: true, user }
+      } else {
+        return { success: false, message: data.message }
       }
-    } else if (credentials.email === 'admin@travelcrm.com') {
-      mockUser = {
-        id: 1,
-        name: 'Admin User',
-        email: credentials.email,
-        role: 'admin',
-        permissions: ['all'],
-        avatar: `https://ui-avatars.com/api/?name=Admin&background=3b82f6&color=fff`,
-        isSuperUser: false,
-        canManageUsers: true,
-        canAccessSystem: true,
-        canExportData: true,
-        canViewAuditLogs: false
-      }
-    } else {
-      mockUser = {
-        id: 2,
-        name: 'Sales User',
-        email: credentials.email,
-        role: 'sales',
-        permissions: ['leads', 'quotes', 'bookings', 'reports'],
-        avatar: `https://ui-avatars.com/api/?name=Sales&background=3b82f6&color=fff`,
-        isSuperUser: false,
-        canManageUsers: false,
-        canAccessSystem: false,
-        canExportData: false,
-        canViewAuditLogs: false
-      }
+    } catch (error) {
+      console.error('Login error:', error)
+      return { success: false, message: 'Login failed. Please try again.' }
     }
-    
-    setUser(mockUser)
-    localStorage.setItem('crm_user', JSON.stringify(mockUser))
-    return { success: true, user: mockUser }
   }
 
-  const logout = () => {
-    setUser(null)
-    localStorage.removeItem('crm_user')
+  const logout = async () => {
+    try {
+      const token = localStorage.getItem('crm_token')
+      if (token) {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+      }
+    } catch (error) {
+      console.error('Logout error:', error)
+    } finally {
+      setUser(null)
+      localStorage.removeItem('crm_token')
+      localStorage.removeItem('crm_user')
+    }
   }
 
   const hasPermission = (permission) => {

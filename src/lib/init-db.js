@@ -1,26 +1,13 @@
 import { seedDatabase } from './seed.js'
-import fs from 'fs'
-import path from 'path'
-import { fileURLToPath } from 'url'
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-
-// Ensure data directory exists
-const dataDir = path.join(__dirname, '../../data')
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true })
-  console.log('📁 Created data directory')
-}
+import { initializeDatabase as initDB } from './database.js'
 
 // Initialize database
 export const initializeDatabase = async () => {
   try {
-    console.log('🚀 Initializing Travel CRM Database...')
+    console.log('🚀 Initializing Travel CRM MySQL Database...')
     
-    // Import database to trigger table creation
-    await import('./database.js')
-    console.log('✅ Database tables created')
+    // Initialize database and create tables
+    await initDB()
     
     // Seed with initial data
     await seedDatabase()

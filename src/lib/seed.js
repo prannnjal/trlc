@@ -1,4 +1,4 @@
-import db from './database.js'
+import { query, execute } from './mysql.js'
 import { hashPassword } from './auth.js'
 
 // Seed the database with initial data
@@ -7,8 +7,8 @@ export const seedDatabase = async () => {
     console.log('🌱 Seeding database...')
     
     // Check if users already exist
-    const existingUsers = db.prepare('SELECT COUNT(*) as count FROM users').get()
-    if (existingUsers.count > 0) {
+    const existingUsers = await query('SELECT COUNT(*) as count FROM users')
+    if (existingUsers[0].count > 0) {
       console.log('✅ Database already seeded')
       return
     }
@@ -41,13 +41,11 @@ export const seedDatabase = async () => {
       }
     ]
     
-    const insertUser = db.prepare(`
-      INSERT INTO users (name, email, password, role, permissions, avatar)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `)
-    
     for (const user of users) {
-      insertUser.run(user.name, user.email, user.password, user.role, user.permissions, user.avatar)
+      await execute(`
+        INSERT INTO users (name, email, password, role, permissions, avatar)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `, [user.name, user.email, user.password, user.role, user.permissions, user.avatar])
     }
     
     console.log('✅ Users created')
@@ -110,22 +108,20 @@ export const seedDatabase = async () => {
       }
     ]
     
-    const insertCustomer = db.prepare(`
-      INSERT INTO customers (
-        first_name, last_name, email, phone, address, city, state, country,
-        postal_code, date_of_birth, passport_number, passport_expiry,
-        emergency_contact_name, emergency_contact_phone, notes, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `)
-    
     for (const customer of customers) {
-      insertCustomer.run(
+      await execute(`
+        INSERT INTO customers (
+          first_name, last_name, email, phone, address, city, state, country,
+          postal_code, date_of_birth, passport_number, passport_expiry,
+          emergency_contact_name, emergency_contact_phone, notes, created_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
         customer.first_name, customer.last_name, customer.email, customer.phone,
         customer.address, customer.city, customer.state, customer.country,
         customer.postal_code, customer.date_of_birth, customer.passport_number,
         customer.passport_expiry, customer.emergency_contact_name,
         customer.emergency_contact_phone, customer.notes, customer.created_by
-      )
+      ])
     }
     
     console.log('✅ Sample customers created')
@@ -176,19 +172,17 @@ export const seedDatabase = async () => {
       }
     ]
     
-    const insertLead = db.prepare(`
-      INSERT INTO leads (
-        customer_id, source, destination, travel_date, return_date,
-        travelers_count, budget_range, status, priority, notes, assigned_to, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `)
-    
     for (const lead of leads) {
-      insertLead.run(
+      await execute(`
+        INSERT INTO leads (
+          customer_id, source, destination, travel_date, return_date,
+          travelers_count, budget_range, status, priority, notes, assigned_to, created_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
         lead.customer_id, lead.source, lead.destination, lead.travel_date,
         lead.return_date, lead.travelers_count, lead.budget_range,
         lead.status, lead.priority, lead.notes, lead.assigned_to, lead.created_by
-      )
+      ])
     }
     
     console.log('✅ Sample leads created')
@@ -223,19 +217,17 @@ export const seedDatabase = async () => {
       }
     ]
     
-    const insertQuote = db.prepare(`
-      INSERT INTO quotes (
-        lead_id, customer_id, quote_number, title, description,
-        total_amount, currency, valid_until, status, terms_conditions, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `)
-    
     for (const quote of quotes) {
-      insertQuote.run(
+      await execute(`
+        INSERT INTO quotes (
+          lead_id, customer_id, quote_number, title, description,
+          total_amount, currency, valid_until, status, terms_conditions, created_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
         quote.lead_id, quote.customer_id, quote.quote_number, quote.title,
         quote.description, quote.total_amount, quote.currency, quote.valid_until,
         quote.status, quote.terms_conditions, quote.created_by
-      )
+      ])
     }
     
     console.log('✅ Sample quotes created')
@@ -255,13 +247,11 @@ export const seedDatabase = async () => {
       { quote_id: 2, item_type: 'Transportation', description: 'JR Pass for local travel', quantity: 1, unit_price: 200.00, total_price: 200.00 }
     ]
     
-    const insertQuoteItem = db.prepare(`
-      INSERT INTO quote_items (quote_id, item_type, description, quantity, unit_price, total_price)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `)
-    
     for (const item of quoteItems) {
-      insertQuoteItem.run(item.quote_id, item.item_type, item.description, item.quantity, item.unit_price, item.total_price)
+      await execute(`
+        INSERT INTO quote_items (quote_id, item_type, description, quantity, unit_price, total_price)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `, [item.quote_id, item.item_type, item.description, item.quantity, item.unit_price, item.total_price])
     }
     
     console.log('✅ Sample quote items created')
@@ -285,20 +275,18 @@ export const seedDatabase = async () => {
       created_by: 3
     }
     
-    const insertBooking = db.prepare(`
+    await execute(`
       INSERT INTO bookings (
         quote_id, customer_id, booking_number, title, description,
         total_amount, currency, deposit_amount, balance_amount,
         travel_date, return_date, status, payment_status, special_requests, created_by
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `)
-    
-    insertBooking.run(
+    `, [
       booking.quote_id, booking.customer_id, booking.booking_number, booking.title,
       booking.description, booking.total_amount, booking.currency, booking.deposit_amount,
       booking.balance_amount, booking.travel_date, booking.return_date, booking.status,
       booking.payment_status, booking.special_requests, booking.created_by
-    )
+    ])
     
     console.log('✅ Sample booking created')
     
@@ -314,16 +302,14 @@ export const seedDatabase = async () => {
       created_by: 3
     }
     
-    const insertPayment = db.prepare(`
+    await execute(`
       INSERT INTO payments (
         booking_id, amount, currency, payment_method, payment_date, reference_number, notes, created_by
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `)
-    
-    insertPayment.run(
+    `, [
       payment.booking_id, payment.amount, payment.currency, payment.payment_method,
       payment.payment_date, payment.reference_number, payment.notes, payment.created_by
-    )
+    ])
     
     console.log('✅ Sample payment created')
     
@@ -379,16 +365,14 @@ export const seedDatabase = async () => {
       }
     ]
     
-    const insertActivity = db.prepare(`
-      INSERT INTO activities (entity_type, entity_id, activity_type, title, description, created_by)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `)
-    
     for (const activity of activities) {
-      insertActivity.run(
+      await execute(`
+        INSERT INTO activities (entity_type, entity_id, activity_type, title, description, created_by)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `, [
         activity.entity_type, activity.entity_id, activity.activity_type,
         activity.title, activity.description, activity.created_by
-      )
+      ])
     }
     
     console.log('✅ Sample activities created')
@@ -403,13 +387,11 @@ export const seedDatabase = async () => {
       { key: 'deposit_percentage', value: '50', description: 'Default deposit percentage' }
     ]
     
-    const insertSetting = db.prepare(`
-      INSERT INTO settings (key, value, description, updated_by)
-      VALUES (?, ?, ?, ?)
-    `)
-    
     for (const setting of settings) {
-      insertSetting.run(setting.key, setting.value, setting.description, 1)
+      await execute(`
+        INSERT INTO settings (\`key\`, value, description, updated_by)
+        VALUES (?, ?, ?, ?)
+      `, [setting.key, setting.value, setting.description, 1])
     }
     
     console.log('✅ System settings created')
