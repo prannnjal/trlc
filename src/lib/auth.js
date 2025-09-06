@@ -1,23 +1,23 @@
-const { SignJWT, jwtVerify } = require('jose')
-const bcrypt = require('bcryptjs')
-const { query, queryOne, execute } = require('./mysql.js')
+import { SignJWT, jwtVerify } from 'jose'
+import bcrypt from 'bcryptjs'
+import { query, queryOne, execute } from './mysql.js'
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production-make-it-long-and-random')
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'
 
 // Hash password
-const hashPassword = async (password) => {
+export const hashPassword = async (password) => {
   const saltRounds = 12
   return await bcrypt.hash(password, saltRounds)
 }
 
 // Verify password
-const verifyPassword = async (password, hashedPassword) => {
+export const verifyPassword = async (password, hashedPassword) => {
   return await bcrypt.compare(password, hashedPassword)
 }
 
 // Generate JWT token
-const generateToken = async (user) => {
+export const generateToken = async (user) => {
   const token = await new SignJWT({ 
     id: user.id, 
     email: user.email, 
@@ -33,7 +33,7 @@ const generateToken = async (user) => {
 }
 
 // Verify JWT token
-const verifyToken = async (token) => {
+export const verifyToken = async (token) => {
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET)
     return payload
@@ -44,7 +44,7 @@ const verifyToken = async (token) => {
 }
 
 // Create user
-const createUser = async (userData, createdBy = null) => {
+export const createUser = async (userData, createdBy = null) => {
   const { name, email, password, role, permissions } = userData
   
   // Hash password
@@ -87,7 +87,7 @@ const createUser = async (userData, createdBy = null) => {
 }
 
 // Get user by email
-const getUserByEmail = async (email) => {
+export const getUserByEmail = async (email) => {
   const user = await queryOne('SELECT * FROM users WHERE email = ?', [email])
   if (user && user.permissions) {
     // Handle both string and array permissions
@@ -104,7 +104,7 @@ const getUserByEmail = async (email) => {
 }
 
 // Get user by ID
-const getUserById = async (id) => {
+export const getUserById = async (id) => {
   const user = await queryOne('SELECT * FROM users WHERE id = ?', [id])
   if (user && user.permissions) {
     // Handle both string and array permissions
@@ -121,7 +121,7 @@ const getUserById = async (id) => {
 }
 
 // Get all users (for admin/super user)
-const getAllUsers = async () => {
+export const getAllUsers = async () => {
   const users = await query(`
     SELECT u.id, u.name, u.email, u.role, u.is_active, u.created_at, u.created_by,
            creator.name as created_by_name
@@ -137,7 +137,7 @@ const getAllUsers = async () => {
 }
 
 // Get users created by a specific user (for hierarchy)
-const getUsersCreatedBy = async (creatorId) => {
+export const getUsersCreatedBy = async (creatorId) => {
   const users = await query(`
     SELECT u.id, u.name, u.email, u.role, u.is_active, u.created_at
     FROM users u
@@ -152,7 +152,7 @@ const getUsersCreatedBy = async (creatorId) => {
 }
 
 // Get manageable users based on role and hierarchy
-const getManageableUsers = async (user) => {
+export const getManageableUsers = async (user) => {
   if (user.role === 'super') {
     // Super users can see all users
     return await getAllUsers()
@@ -167,17 +167,17 @@ const getManageableUsers = async (user) => {
 }
 
 // Check if user is a caller
-const isCaller = (user) => {
+export const isCaller = (user) => {
   return user && user.role === 'caller'
 }
 
 // Check if user can create other users
-const canCreateUsers = (user) => {
+export const canCreateUsers = (user) => {
   return user && (user.role === 'super' || user.role === 'admin')
 }
 
 // Check if user can manage another user
-const canManageUser = (manager, targetUser) => {
+export const canManageUser = (manager, targetUser) => {
   if (!manager || !targetUser) return false
   
   // Super users can manage everyone
@@ -193,7 +193,7 @@ const canManageUser = (manager, targetUser) => {
 }
 
 // Update user
-const updateUser = async (id, updates) => {
+export const updateUser = async (id, updates) => {
   const allowedFields = ['name', 'email', 'role', 'permissions', 'is_active']
   const updateFields = []
   const updateValues = []
@@ -225,13 +225,13 @@ const updateUser = async (id, updates) => {
 }
 
 // Delete user
-const deleteUser = async (id) => {
+export const deleteUser = async (id) => {
   await execute('DELETE FROM users WHERE id = ?', [id])
   return true
 }
 
 // Authenticate user
-const authenticateUser = async (email, password) => {
+export const authenticateUser = async (email, password) => {
   const user = await getUserByEmail(email)
   
   if (!user) {
@@ -252,23 +252,4 @@ const authenticateUser = async (email, password) => {
   delete user.password
   
   return user
-}
-
-module.exports = {
-  hashPassword,
-  verifyPassword,
-  generateToken,
-  verifyToken,
-  createUser,
-  getUserByEmail,
-  getUserById,
-  getAllUsers,
-  getUsersCreatedBy,
-  getManageableUsers,
-  isCaller,
-  canCreateUsers,
-  canManageUser,
-  updateUser,
-  deleteUser,
-  authenticateUser
 }

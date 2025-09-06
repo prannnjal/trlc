@@ -14,7 +14,7 @@ import {
   ArrowLeftOnRectangleIcon,
   Bars3Icon,
   ShieldCheckIcon,
-  DatabaseIcon
+  CircleStackIcon
 } from '@heroicons/react/24/outline'
 
 const getNavigationItems = (isSuperUser) => {
@@ -104,7 +104,7 @@ const getNavigationItems = (isSuperUser) => {
       {
         name: 'Data & Analytics',
         href: '/data',
-        icon: DatabaseIcon,
+        icon: CircleStackIcon,
         permission: 'super_admin',
         children: [
           { name: 'Data Export', href: '/data/export' },

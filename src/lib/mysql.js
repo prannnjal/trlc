@@ -1,4 +1,4 @@
-const mysql = require('mysql2/promise')
+import mysql from 'mysql2/promise'
 
 // Database configuration
 const dbConfig = {
@@ -17,7 +17,7 @@ const dbConfig = {
 const pool = mysql.createPool(dbConfig)
 
 // Test database connection
-const testConnection = async () => {
+export const testConnection = async () => {
   try {
     const connection = await pool.getConnection()
     console.log('✅ Database connected successfully')
@@ -30,7 +30,7 @@ const testConnection = async () => {
 }
 
 // Execute a query and return results
-const query = async (sql, params = []) => {
+export const query = async (sql, params = []) => {
   try {
     const [rows] = await pool.execute(sql, params)
     return rows
@@ -41,7 +41,7 @@ const query = async (sql, params = []) => {
 }
 
 // Execute a query and return single result
-const queryOne = async (sql, params = []) => {
+export const queryOne = async (sql, params = []) => {
   try {
     const [rows] = await pool.execute(sql, params)
     return rows.length > 0 ? rows[0] : null
@@ -52,7 +52,7 @@ const queryOne = async (sql, params = []) => {
 }
 
 // Execute a query (INSERT, UPDATE, DELETE) and return result
-const execute = async (sql, params = []) => {
+export const execute = async (sql, params = []) => {
   try {
     const [result] = await pool.execute(sql, params)
     return result
@@ -63,7 +63,7 @@ const execute = async (sql, params = []) => {
 }
 
 // Get connection from pool
-const getConnection = async () => {
+export const getConnection = async () => {
   try {
     return await pool.getConnection()
   } catch (error) {
@@ -73,7 +73,7 @@ const getConnection = async () => {
 }
 
 // Close all connections
-const closePool = async () => {
+export const closePool = async () => {
   try {
     await pool.end()
     console.log('Database pool closed')
@@ -84,7 +84,7 @@ const closePool = async () => {
 }
 
 // Transaction helper
-const transaction = async (callback) => {
+export const transaction = async (callback) => {
   const connection = await getConnection()
   try {
     await connection.beginTransaction()
@@ -100,7 +100,7 @@ const transaction = async (callback) => {
 }
 
 // Health check
-const healthCheck = async () => {
+export const healthCheck = async () => {
   try {
     const result = await queryOne('SELECT 1 as health')
     return result && result.health === 1
@@ -111,7 +111,7 @@ const healthCheck = async () => {
 }
 
 // Get database stats
-const getStats = async () => {
+export const getStats = async () => {
   try {
     const stats = await queryOne(`
       SELECT 
@@ -130,7 +130,7 @@ const getStats = async () => {
 }
 
 // Backup database (basic implementation)
-const backupDatabase = async () => {
+export const backupDatabase = async () => {
   try {
     const tables = ['users', 'customers', 'leads', 'quotes', 'bookings', 'payments', 'activities', 'settings']
     const backup = {}
@@ -147,7 +147,7 @@ const backupDatabase = async () => {
 }
 
 // Restore database (basic implementation)
-const restoreDatabase = async (backup) => {
+export const restoreDatabase = async (backup) => {
   try {
     await transaction(async (connection) => {
       // Clear existing data
@@ -181,7 +181,7 @@ const restoreDatabase = async (backup) => {
 }
 
 // Initialize database tables
-const initializeTables = async () => {
+export const initializeTables = async () => {
   try {
     // Users table
     await execute(`
@@ -205,15 +205,20 @@ const initializeTables = async () => {
     await execute(`
       CREATE TABLE IF NOT EXISTS customers (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(100) NOT NULL,
+        first_name VARCHAR(50) NOT NULL,
+        last_name VARCHAR(50) NOT NULL,
         email VARCHAR(100),
         phone VARCHAR(20),
-        company VARCHAR(100),
         address TEXT,
         city VARCHAR(50),
         state VARCHAR(50),
         country VARCHAR(50),
         postal_code VARCHAR(20),
+        date_of_birth DATE,
+        passport_number VARCHAR(50),
+        passport_expiry DATE,
+        emergency_contact_name VARCHAR(100),
+        emergency_contact_phone VARCHAR(20),
         notes TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -228,14 +233,20 @@ const initializeTables = async () => {
         id INT AUTO_INCREMENT PRIMARY KEY,
         customer_id INT,
         source VARCHAR(50),
+        destination VARCHAR(100),
+        travel_date DATE,
+        return_date DATE,
+        travelers_count INT DEFAULT 1,
+        budget_range VARCHAR(50),
         status ENUM('new', 'contacted', 'qualified', 'proposal', 'negotiation', 'closed_won', 'closed_lost') DEFAULT 'new',
-        priority ENUM('low', 'medium', 'high') DEFAULT 'medium',
-        value DECIMAL(10,2),
+        priority ENUM('low', 'medium', 'high', 'urgent') DEFAULT 'medium',
         notes TEXT,
+        assigned_to INT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         created_by INT,
         FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
+        FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL,
         FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
       )
     `)
@@ -248,10 +259,12 @@ const initializeTables = async () => {
         lead_id INT,
         title VARCHAR(200) NOT NULL,
         description TEXT,
-        amount DECIMAL(10,2) NOT NULL,
+        total_amount DECIMAL(10,2) NOT NULL,
         currency VARCHAR(3) DEFAULT 'USD',
-        status ENUM('draft', 'sent', 'accepted', 'rejected', 'expired') DEFAULT 'draft',
         valid_until DATE,
+        status ENUM('draft', 'sent', 'accepted', 'rejected', 'expired') DEFAULT 'draft',
+        terms_conditions TEXT,
+        quote_reference VARCHAR(50) UNIQUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         created_by INT,
@@ -267,14 +280,14 @@ const initializeTables = async () => {
         id INT AUTO_INCREMENT PRIMARY KEY,
         customer_id INT,
         quote_id INT,
-        booking_reference VARCHAR(50) UNIQUE,
         destination VARCHAR(200),
         departure_date DATE,
         return_date DATE,
-        travelers INT DEFAULT 1,
+        travelers_count INT DEFAULT 1,
         total_amount DECIMAL(10,2),
         status ENUM('confirmed', 'pending', 'cancelled', 'completed') DEFAULT 'pending',
         notes TEXT,
+        booking_reference VARCHAR(50) UNIQUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         created_by INT,
@@ -343,7 +356,7 @@ const initializeTables = async () => {
   }
 }
 
-module.exports = {
+export default {
   pool,
   testConnection,
   query,

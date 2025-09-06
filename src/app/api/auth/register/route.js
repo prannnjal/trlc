@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server'
 import { createUser, getUserByEmail, generateToken } from '@/lib/auth.js'
 import Joi from 'joi'
 
@@ -17,11 +16,14 @@ export async function POST(request) {
     // Validate request body
     const { error, value } = registerSchema.validate(body)
     if (error) {
-      return NextResponse.json({
+      return new Response(JSON.stringify({
         success: false,
         message: 'Validation error',
         errors: error.details.map(detail => detail.message)
-      }, { status: 400 })
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      })
     }
     
     const { name, email, password, role } = value
@@ -29,10 +31,13 @@ export async function POST(request) {
     // Check if user already exists
     const existingUser = await getUserByEmail(email)
     if (existingUser) {
-      return NextResponse.json({
+      return new Response(JSON.stringify({
         success: false,
         message: 'User with this email already exists'
-      }, { status: 409 })
+      }), {
+        status: 409,
+        headers: { 'Content-Type': 'application/json' }
+      })
     }
     
     // Set default permissions based on role
@@ -53,7 +58,7 @@ export async function POST(request) {
     })
     
     // Generate JWT token
-    const token = generateToken(user)
+    const token = await generateToken(user)
     
     // Prepare user data
     const userData = {
@@ -70,20 +75,26 @@ export async function POST(request) {
       canViewAuditLogs: user.role === 'super'
     }
     
-    return NextResponse.json({
+    return new Response(JSON.stringify({
       success: true,
       message: 'User created successfully',
       data: {
         user: userData,
         token
       }
-    }, { status: 201 })
+    }), {
+      status: 201,
+      headers: { 'Content-Type': 'application/json' }
+    })
     
   } catch (error) {
     console.error('Registration error:', error)
-    return NextResponse.json({
+    return new Response(JSON.stringify({
       success: false,
       message: 'Internal server error'
-    }, { status: 500 })
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    })
   }
 }

@@ -1,6 +1,5 @@
-const { NextResponse } = require('next/server')
-const { getUserByEmail, verifyPassword, generateToken } = require('@/lib/auth.js')
-const Joi = require('joi')
+import { getUserByEmail, verifyPassword, generateToken } from '@/lib/auth.js'
+import Joi from 'joi'
 
 // Validation schema
 const loginSchema = Joi.object({
@@ -8,18 +7,21 @@ const loginSchema = Joi.object({
   password: Joi.string().min(6).required()
 })
 
-async function POST(request) {
+export async function POST(request) {
   try {
     const body = await request.json()
     
     // Validate request body
     const { error, value } = loginSchema.validate(body)
     if (error) {
-      return NextResponse.json({
+      return new Response(JSON.stringify({
         success: false,
         message: 'Validation error',
         errors: error.details.map(detail => detail.message)
-      }, { status: 400 })
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      })
     }
     
     const { email, password } = value
@@ -27,19 +29,25 @@ async function POST(request) {
     // Get user from database
     const user = await getUserByEmail(email)
     if (!user) {
-      return NextResponse.json({
+      return new Response(JSON.stringify({
         success: false,
         message: 'Invalid email or password'
-      }, { status: 401 })
+      }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
     }
     
     // Verify password
     const isValidPassword = await verifyPassword(password, user.password)
     if (!isValidPassword) {
-      return NextResponse.json({
+      return new Response(JSON.stringify({
         success: false,
         message: 'Invalid email or password'
-      }, { status: 401 })
+      }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
     }
     
     // Generate JWT token
@@ -75,22 +83,26 @@ async function POST(request) {
       canViewAuditLogs: user.role === 'super'
     }
     
-    return NextResponse.json({
+    return new Response(JSON.stringify({
       success: true,
       message: 'Login successful',
       data: {
         user: userData,
         token
       }
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
     })
     
   } catch (error) {
     console.error('Login error:', error)
-    return NextResponse.json({
+    return new Response(JSON.stringify({
       success: false,
       message: 'Internal server error'
-    }, { status: 500 })
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    })
   }
 }
-
-module.exports = { POST }

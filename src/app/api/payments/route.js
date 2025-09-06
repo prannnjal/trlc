@@ -1,90 +1,110 @@
-import { NextResponse } from 'next/server'
-import db from '@/lib/database.js'
-import { authenticate } from '@/lib/middleware.js'
-import Joi from 'joi'
+const { NextResponse } = require('next/server')
+const db = require('@/lib/database.js')
+const { verifyToken } = require('@/lib/auth.js')
+const Joi = require('joi')
 
 // Validation schema for payment creation
 const paymentSchema = Joi.object({
   booking_id: Joi.number().integer().required(),
   amount: Joi.number().positive().required(),
   currency: Joi.string().length(3).default('USD'),
-  payment_method: Joi.string().min(2).max(50).required(),
-  payment_date: Joi.date().required(),
-  reference_number: Joi.string().allow(''),
+  payment_method: Joi.string().valid('credit_card', 'bank_transfer', 'cash', 'check', 'other').required(),
+  status: Joi.string().valid('pending', 'completed', 'failed', 'refunded').default('pending'),
+  transaction_id: Joi.string().allow(''),
+  payment_date: Joi.date().allow(''),
   notes: Joi.string().allow('')
 })
 
 // GET /api/payments - Get all payments
-export async function GET(request) {
+async function GET(request) {
   try {
-    return new Promise((resolve) => {
-      authenticate(request, {
-        json: (data) => resolve(NextResponse.json(data, { status: data.status || 200 })),
-        status: (code) => ({
-          json: (data) => resolve(NextResponse.json(data, { status: code }))
-        })
-      }, () => {
-        const { searchParams } = new URL(request.url)
-        const page = parseInt(searchParams.get('page')) || 1
-        const limit = parseInt(searchParams.get('limit')) || 10
-        const booking_id = searchParams.get('booking_id') || ''
-        const payment_method = searchParams.get('payment_method') || ''
-        const offset = (page - 1) * limit
-        
-        let query = `
-          SELECT p.*, 
-                 b.booking_number, b.title as booking_title,
-                 c.first_name, c.last_name, c.email as customer_email,
-                 u.name as created_by_name
-          FROM payments p
-          LEFT JOIN bookings b ON p.booking_id = b.id
-          LEFT JOIN customers c ON b.customer_id = c.id
-          LEFT JOIN users u ON p.created_by = u.id
-        `
-        let countQuery = 'SELECT COUNT(*) as total FROM payments p'
-        let params = []
-        let conditions = []
-        
-        if (booking_id) {
-          conditions.push('p.booking_id = ?')
-          params.push(booking_id)
+    // Get user from Authorization header
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({
+        success: false,
+        message: 'Access denied. No token provided.'
+      }, { status: 401 })
+    }
+    
+    const token = authHeader.substring(7)
+    const decoded = await verifyToken(token)
+    
+    if (!decoded) {
+      return NextResponse.json({
+        success: false,
+        message: 'Invalid token.'
+      }, { status: 401 })
+    }
+    
+    // Get query parameters
+    const { searchParams } = new URL(request.url)
+    const page = parseInt(searchParams.get('page')) || 1
+    const limit = parseInt(searchParams.get('limit')) || 10
+    const search = searchParams.get('search') || ''
+    const status = searchParams.get('status') || ''
+    const payment_method = searchParams.get('payment_method') || ''
+    const sortBy = searchParams.get('sortBy') || 'created_at'
+    const sortOrder = searchParams.get('sortOrder') || 'DESC'
+    
+    // Build search query
+    let whereClause = 'WHERE 1=1'
+    let queryParams = []
+    
+    if (search) {
+      whereClause += ' AND (p.transaction_id LIKE ? OR c.first_name LIKE ? OR c.last_name LIKE ? OR b.booking_reference LIKE ?)'
+      queryParams.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`)
+    }
+    
+    if (status) {
+      whereClause += ' AND p.status = ?'
+      queryParams.push(status)
+    }
+    
+    if (payment_method) {
+      whereClause += ' AND p.payment_method = ?'
+      queryParams.push(payment_method)
+    }
+    
+    // Get total count
+    const countQuery = `
+      SELECT COUNT(*) as total 
+      FROM payments p
+      LEFT JOIN bookings b ON p.booking_id = b.id
+      LEFT JOIN customers c ON b.customer_id = c.id
+      ${whereClause}
+    `
+    const countResult = await db.queryOne(countQuery, queryParams)
+    const total = countResult.total
+    
+    // Get payments with pagination
+    const offset = (page - 1) * limit
+    const paymentsQuery = `
+      SELECT p.*, 
+             b.booking_reference, b.destination,
+             c.first_name, c.last_name, c.email, c.phone
+      FROM payments p
+      LEFT JOIN bookings b ON p.booking_id = b.id
+      LEFT JOIN customers c ON b.customer_id = c.id
+      ${whereClause}
+      ORDER BY p.${sortBy} ${sortOrder}
+      LIMIT ? OFFSET ?
+    `
+    const payments = await db.query(paymentsQuery, [...queryParams, limit, offset])
+    
+    return NextResponse.json({
+      success: true,
+      data: {
+        payments,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit)
         }
-        
-        if (payment_method) {
-          conditions.push('p.payment_method = ?')
-          params.push(payment_method)
-        }
-        
-        if (conditions.length > 0) {
-          const whereClause = ' WHERE ' + conditions.join(' AND ')
-          query += whereClause
-          countQuery += whereClause
-        }
-        
-        query += ' ORDER BY p.payment_date DESC LIMIT ? OFFSET ?'
-        params.push(limit, offset)
-        
-        const stmt = db.prepare(query)
-        const payments = stmt.all(...params)
-        
-        const countStmt = db.prepare(countQuery)
-        const countParams = params.slice(0, -2) // Remove limit and offset
-        const { total } = countStmt.get(...countParams)
-        
-        resolve(NextResponse.json({
-          success: true,
-          data: {
-            payments,
-            pagination: {
-              page,
-              limit,
-              total,
-              pages: Math.ceil(total / limit)
-            }
-          }
-        }))
-      })
+      }
     })
+    
   } catch (error) {
     console.error('Get payments error:', error)
     return NextResponse.json({
@@ -95,91 +115,74 @@ export async function GET(request) {
 }
 
 // POST /api/payments - Create new payment
-export async function POST(request) {
+async function POST(request) {
   try {
-    return new Promise((resolve) => {
-      authenticate(request, {
-        json: (data) => resolve(NextResponse.json(data, { status: data.status || 200 })),
-        status: (code) => ({
-          json: (data) => resolve(NextResponse.json(data, { status: code }))
-        })
-      }, async () => {
-        const body = await request.json()
-        
-        // Validate request body
-        const { error, value } = paymentSchema.validate(body)
-        if (error) {
-          resolve(NextResponse.json({
-            success: false,
-            message: 'Validation error',
-            errors: error.details.map(detail => detail.message)
-          }, { status: 400 }))
-          return
-        }
-        
-        // Check if booking exists
-        const bookingStmt = db.prepare('SELECT id FROM bookings WHERE id = ?')
-        const booking = bookingStmt.get(value.booking_id)
-        
-        if (!booking) {
-          resolve(NextResponse.json({
-            success: false,
-            message: 'Booking not found'
-          }, { status: 404 }))
-          return
-        }
-        
-        const stmt = db.prepare(`
-          INSERT INTO payments (
-            booking_id, amount, currency, payment_method, payment_date, reference_number, notes, created_by
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `)
-        
-        const result = stmt.run(
-          value.booking_id,
-          value.amount,
-          value.currency,
-          value.payment_method,
-          value.payment_date,
-          value.reference_number || null,
-          value.notes || null,
-          request.user.id
-        )
-        
-        // Update booking payment status
-        const updateBookingStmt = db.prepare(`
-          UPDATE bookings 
-          SET payment_status = CASE 
-            WHEN (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE booking_id = ?) >= total_amount THEN 'paid'
-            WHEN (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE booking_id = ?) > 0 THEN 'partial'
-            ELSE 'pending'
-          END,
-          updated_at = CURRENT_TIMESTAMP
-          WHERE id = ?
-        `)
-        updateBookingStmt.run(value.booking_id, value.booking_id, value.booking_id)
-        
-        // Get the created payment with related data
-        const getStmt = db.prepare(`
-          SELECT p.*, 
-                 b.booking_number, b.title as booking_title,
-                 c.first_name, c.last_name, c.email as customer_email,
-                 u.name as created_by_name
-          FROM payments p
-          LEFT JOIN bookings b ON p.booking_id = b.id
-          LEFT JOIN customers c ON b.customer_id = c.id
-          LEFT JOIN users u ON p.created_by = u.id
-          WHERE p.id = ?
-        `)
-        const payment = getStmt.get(result.lastInsertRowid)
-        
-        resolve(NextResponse.json({
-          success: true,
-          message: 'Payment created successfully',
-          data: { payment }
-        }, { status: 201 }))
-      })
-    })
+    // Get user from Authorization header
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({
+        success: false,
+        message: 'Access denied. No token provided.'
+      }, { status: 401 })
+    }
+    
+    const token = authHeader.substring(7)
+    const decoded = await verifyToken(token)
+    
+    if (!decoded) {
+      return NextResponse.json({
+        success: false,
+        message: 'Invalid token.'
+      }, { status: 401 })
+    }
+    
+    const body = await request.json()
+    
+    // Validate request body
+    const { error, value } = paymentSchema.validate(body)
+    if (error) {
+      return NextResponse.json({
+        success: false,
+        message: 'Validation error',
+        errors: error.details.map(detail => detail.message)
+      }, { status: 400 })
+    }
+    
+    // Create payment
+    const result = await db.execute(`
+      INSERT INTO payments (
+        booking_id, amount, currency, payment_method, status,
+        transaction_id, payment_date, notes, created_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      value.booking_id,
+      value.amount,
+      value.currency,
+      value.payment_method,
+      value.status,
+      value.transaction_id || null,
+      value.payment_date || null,
+      value.notes || null,
+      decoded.id
+    ])
+    
+    // Get created payment
+    const payment = await db.queryOne(`
+      SELECT p.*, 
+             b.booking_reference, b.destination,
+             c.first_name, c.last_name, c.email, c.phone
+      FROM payments p
+      LEFT JOIN bookings b ON p.booking_id = b.id
+      LEFT JOIN customers c ON b.customer_id = c.id
+      WHERE p.id = ?
+    `, [result.insertId])
+    
+    return NextResponse.json({
+      success: true,
+      message: 'Payment created successfully',
+      data: { payment }
+    }, { status: 201 })
+    
   } catch (error) {
     console.error('Create payment error:', error)
     return NextResponse.json({
@@ -188,3 +191,5 @@ export async function POST(request) {
     }, { status: 500 })
   }
 }
+
+module.exports = { GET, POST }

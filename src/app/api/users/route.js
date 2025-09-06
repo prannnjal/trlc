@@ -1,6 +1,5 @@
-const { NextResponse } = require('next/server')
-const { getManageableUsers, canCreateUsers, verifyToken } = require('@/lib/auth.js')
-const Joi = require('joi')
+import { getManageableUsers, canCreateUsers, verifyToken } from '@/lib/auth.js'
+import Joi from 'joi'
 
 // Validation schema for user creation
 const userSchema = Joi.object({
@@ -12,25 +11,31 @@ const userSchema = Joi.object({
 })
 
 // GET /api/users - Get manageable users based on hierarchy
-async function GET(request) {
+export async function GET(request) {
   try {
     // Get user from Authorization header
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({
+      return new Response(JSON.stringify({
         success: false,
         message: 'Access denied. No token provided.'
-      }, { status: 401 })
+      }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
     }
     
     const token = authHeader.substring(7)
     const decoded = await verifyToken(token)
     
     if (!decoded) {
-      return NextResponse.json({
+      return new Response(JSON.stringify({
         success: false,
         message: 'Invalid token.'
-      }, { status: 401 })
+      }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      })
     }
     
     // Get manageable users based on hierarchy
@@ -47,20 +52,24 @@ async function GET(request) {
       }
     })
     
-    return NextResponse.json({
+    return new Response(JSON.stringify({
       success: true,
       data: { users: safeUsers }
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
     })
     
   } catch (error) {
     console.error('Get users error:', error)
-    return NextResponse.json({
+    return new Response(JSON.stringify({
       success: false,
       message: 'Internal server error'
-    }, { status: 500 })
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    })
   }
 }
 
 // POST method removed - use /api/users/create instead
-
-module.exports = { GET }

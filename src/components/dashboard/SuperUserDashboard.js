@@ -7,7 +7,7 @@ import {
   UserGroupIcon,
   CogIcon,
   ChartBarIcon,
-  DatabaseIcon,
+  CircleStackIcon,
   ExclamationTriangleIcon,
   CheckCircleIcon,
   ClockIcon
@@ -53,7 +53,7 @@ export default function SuperUserDashboard() {
       title: 'Database Health',
       value: 'Healthy',
       status: 'healthy',
-      icon: DatabaseIcon,
+      icon: CircleStackIcon,
       color: 'text-green-600'
     },
     {
@@ -90,7 +90,7 @@ export default function SuperUserDashboard() {
     {
       title: 'Data Export',
       description: 'Export system data and reports',
-      icon: DatabaseIcon,
+      icon: CircleStackIcon,
       action: 'Export Data',
       color: 'bg-green-500'
     },

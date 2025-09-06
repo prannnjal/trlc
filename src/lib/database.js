@@ -1,13 +1,10 @@
 // MySQL database configuration and utilities
-import { query, queryOne, execute, createDatabase, createTables, testConnection } from './mysql.js'
+import { query, queryOne, execute, testConnection, initializeTables } from './mysql.js'
 
 // Initialize database connection and create tables
 export const initializeDatabase = async () => {
   try {
     console.log('🚀 Initializing MySQL database...')
-    
-    // Create database if it doesn't exist
-    await createDatabase()
     
     // Test connection
     const connected = await testConnection()
@@ -16,7 +13,7 @@ export const initializeDatabase = async () => {
     }
     
     // Create tables
-    await createTables()
+    await initializeTables()
     
     console.log('✅ MySQL database initialized successfully')
     return true

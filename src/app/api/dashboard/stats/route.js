@@ -1,134 +1,171 @@
-import { NextResponse } from 'next/server'
-import db from '@/lib/database.js'
-import { authenticate } from '@/lib/middleware.js'
+const { NextResponse } = require('next/server')
+const db = require('@/lib/database.js')
+const { verifyToken } = require('@/lib/auth.js')
 
 // GET /api/dashboard/stats - Get dashboard statistics
-export async function GET(request) {
+async function GET(request) {
   try {
-    return new Promise((resolve) => {
-      authenticate(request, {
-        json: (data) => resolve(NextResponse.json(data, { status: data.status || 200 })),
-        status: (code) => ({
-          json: (data) => resolve(NextResponse.json(data, { status: code }))
-        })
-      }, () => {
-        // Get total counts
-        const totalCustomers = db.prepare('SELECT COUNT(*) as count FROM customers').get().count
-        const totalLeads = db.prepare('SELECT COUNT(*) as count FROM leads').get().count
-        const totalQuotes = db.prepare('SELECT COUNT(*) as count FROM quotes').get().count
-        const totalBookings = db.prepare('SELECT COUNT(*) as count FROM bookings').get().count
-        
-        // Get revenue statistics
-        const revenueStats = db.prepare(`
-          SELECT 
-            COUNT(*) as total_bookings,
-            COALESCE(SUM(total_amount), 0) as total_revenue,
-            COALESCE(AVG(total_amount), 0) as avg_booking_value
-          FROM bookings 
-          WHERE status != 'cancelled'
-        `).get()
-        
-        // Get payment statistics
-        const paymentStats = db.prepare(`
-          SELECT 
-            COALESCE(SUM(amount), 0) as total_payments,
-            COUNT(*) as total_payment_transactions
-          FROM payments
-        `).get()
-        
-        // Get leads by status
-        const leadsByStatus = db.prepare(`
-          SELECT status, COUNT(*) as count
-          FROM leads
-          GROUP BY status
-          ORDER BY count DESC
-        `).all()
-        
-        // Get bookings by status
-        const bookingsByStatus = db.prepare(`
-          SELECT status, COUNT(*) as count
-          FROM bookings
-          GROUP BY status
-          ORDER BY count DESC
-        `).all()
-        
-        // Get recent activities
-        const recentActivities = db.prepare(`
-          SELECT a.*, u.name as created_by_name
-          FROM activities a
-          LEFT JOIN users u ON a.created_by = u.id
-          ORDER BY a.created_at DESC
-          LIMIT 10
-        `).all()
-        
-        // Get monthly revenue (last 12 months)
-        const monthlyRevenue = db.prepare(`
-          SELECT 
-            strftime('%Y-%m', created_at) as month,
-            COUNT(*) as bookings_count,
-            COALESCE(SUM(total_amount), 0) as revenue
-          FROM bookings
-          WHERE created_at >= date('now', '-12 months') AND status != 'cancelled'
-          GROUP BY strftime('%Y-%m', created_at)
-          ORDER BY month DESC
-        `).all()
-        
-        // Get top customers by bookings
-        const topCustomers = db.prepare(`
-          SELECT 
-            c.id, c.first_name, c.last_name, c.email,
-            COUNT(b.id) as bookings_count,
-            COALESCE(SUM(b.total_amount), 0) as total_spent
-          FROM customers c
-          LEFT JOIN bookings b ON c.id = b.customer_id AND b.status != 'cancelled'
-          GROUP BY c.id, c.first_name, c.last_name, c.email
-          HAVING bookings_count > 0
-          ORDER BY total_spent DESC
-          LIMIT 10
-        `).all()
-        
-        // Get conversion rates
-        const conversionStats = db.prepare(`
-          SELECT 
-            (SELECT COUNT(*) FROM leads WHERE status = 'closed_won') as won_leads,
-            (SELECT COUNT(*) FROM leads WHERE status IN ('closed_won', 'closed_lost')) as total_closed_leads,
-            (SELECT COUNT(*) FROM quotes WHERE status = 'accepted') as accepted_quotes,
-            (SELECT COUNT(*) FROM quotes) as total_quotes
-        `).get()
-        
-        const leadConversionRate = conversionStats.total_closed_leads > 0 
-          ? (conversionStats.won_leads / conversionStats.total_closed_leads * 100).toFixed(2)
-          : 0
-        
-        const quoteConversionRate = conversionStats.total_quotes > 0
-          ? (conversionStats.accepted_quotes / conversionStats.total_quotes * 100).toFixed(2)
-          : 0
-        
-        resolve(NextResponse.json({
-          success: true,
-          data: {
-            overview: {
-              totalCustomers,
-              totalLeads,
-              totalQuotes,
-              totalBookings,
-              totalRevenue: revenueStats.total_revenue,
-              totalPayments: paymentStats.total_payments,
-              avgBookingValue: revenueStats.avg_booking_value
-            },
-            conversion: {
-              leadConversionRate: parseFloat(leadConversionRate),
-              quoteConversionRate: parseFloat(quoteConversionRate)
-            },
-            leadsByStatus,
-            bookingsByStatus,
-            recentActivities,
-            monthlyRevenue,
-            topCustomers
-          }
-        }))
-      })
+    // Get user from Authorization header
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({
+        success: false,
+        message: 'Access denied. No token provided.'
+      }, { status: 401 })
+    }
+    
+    const token = authHeader.substring(7)
+    const decoded = await verifyToken(token)
+    
+    if (!decoded) {
+      return NextResponse.json({
+        success: false,
+        message: 'Invalid token.'
+      }, { status: 401 })
+    }
+    
+    // Get basic counts
+    const [
+      totalCustomers,
+      totalLeads,
+      totalQuotes,
+      totalBookings,
+      totalPayments
+    ] = await Promise.all([
+      db.queryOne('SELECT COUNT(*) as count FROM customers'),
+      db.queryOne('SELECT COUNT(*) as count FROM leads'),
+      db.queryOne('SELECT COUNT(*) as count FROM quotes'),
+      db.queryOne('SELECT COUNT(*) as count FROM bookings'),
+      db.queryOne('SELECT COUNT(*) as count FROM payments')
+    ])
+    
+    // Get leads by status
+    const leadsByStatus = await db.query(`
+      SELECT status, COUNT(*) as count 
+      FROM leads 
+      GROUP BY status
+    `)
+    
+    // Get leads by priority
+    const leadsByPriority = await db.query(`
+      SELECT priority, COUNT(*) as count 
+      FROM leads 
+      GROUP BY priority
+    `)
+    
+    // Get quotes by status
+    const quotesByStatus = await db.query(`
+      SELECT status, COUNT(*) as count 
+      FROM quotes 
+      GROUP BY status
+    `)
+    
+    // Get bookings by status
+    const bookingsByStatus = await db.query(`
+      SELECT status, COUNT(*) as count 
+      FROM bookings 
+      GROUP BY status
+    `)
+    
+    // Get payments by status
+    const paymentsByStatus = await db.query(`
+      SELECT status, COUNT(*) as count 
+      FROM payments 
+      GROUP BY status
+    `)
+    
+    // Get revenue data (last 12 months)
+    const revenueData = await db.query(`
+      SELECT 
+        DATE_FORMAT(created_at, '%Y-%m') as month,
+        SUM(amount) as revenue
+      FROM payments 
+      WHERE status = 'completed' 
+        AND created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
+      GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+      ORDER BY month
+    `)
+    
+    // Get recent activities
+    const recentActivities = await db.query(`
+      SELECT 
+        a.type,
+        a.subject,
+        a.description,
+        a.created_at,
+        c.first_name,
+        c.last_name,
+        l.source,
+        l.destination
+      FROM activities a
+      LEFT JOIN customers c ON a.related_id = c.id AND a.related_type = 'customer'
+      LEFT JOIN leads l ON a.related_id = l.id AND a.related_type = 'lead'
+      ORDER BY a.created_at DESC
+      LIMIT 10
+    `)
+    
+    // Get top performing sources
+    const topSources = await db.query(`
+      SELECT source, COUNT(*) as count
+      FROM leads
+      GROUP BY source
+      ORDER BY count DESC
+      LIMIT 5
+    `)
+    
+    // Get conversion rates
+    const conversionRates = await db.query(`
+      SELECT 
+        'Lead to Quote' as stage,
+        (SELECT COUNT(*) FROM quotes) / (SELECT COUNT(*) FROM leads) * 100 as rate
+      UNION ALL
+      SELECT 
+        'Quote to Booking' as stage,
+        (SELECT COUNT(*) FROM bookings) / (SELECT COUNT(*) FROM quotes) * 100 as rate
+      UNION ALL
+      SELECT 
+        'Booking to Payment' as stage,
+        (SELECT COUNT(*) FROM payments WHERE status = 'completed') / (SELECT COUNT(*) FROM bookings) * 100 as rate
+    `)
+    
+    const stats = {
+      overview: {
+        totalCustomers: totalCustomers.count,
+        totalLeads: totalLeads.count,
+        totalQuotes: totalQuotes.count,
+        totalBookings: totalBookings.count,
+        totalPayments: totalPayments.count
+      },
+      leads: {
+        byStatus: leadsByStatus,
+        byPriority: leadsByPriority
+      },
+      quotes: {
+        byStatus: quotesByStatus
+      },
+      bookings: {
+        byStatus: bookingsByStatus
+      },
+      payments: {
+        byStatus: paymentsByStatus
+      },
+      revenue: {
+        monthly: revenueData
+      },
+      activities: {
+        recent: recentActivities
+      },
+      performance: {
+        topSources: topSources,
+        conversionRates: conversionRates
+      }
+    }
+    
+    return NextResponse.json({
+      success: true,
+      data: { stats }
     })
+    
   } catch (error) {
     console.error('Get dashboard stats error:', error)
     return NextResponse.json({
@@ -137,3 +174,5 @@ export async function GET(request) {
     }, { status: 500 })
   }
 }
+
+module.exports = { GET }

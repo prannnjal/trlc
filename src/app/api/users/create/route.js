@@ -1,6 +1,6 @@
-const { NextResponse } = require('next/server')
-const { createUser, canCreateUsers, getUserById, verifyToken } = require('@/lib/auth.js')
-const Joi = require('joi')
+import { NextResponse } from 'next/server'
+import { createUser, canCreateUsers, getUserById, verifyToken } from '@/lib/auth.js'
+import Joi from 'joi'
 
 // Validation schema
 const createUserSchema = Joi.object({
@@ -11,7 +11,7 @@ const createUserSchema = Joi.object({
   permissions: Joi.array().items(Joi.string()).default([])
 })
 
-async function POST(request) {
+export async function POST(request) {
   try {
     const body = await request.json()
 
@@ -117,5 +117,3 @@ async function POST(request) {
     }, { status: 500 })
   }
 }
-
-module.exports = { POST }
