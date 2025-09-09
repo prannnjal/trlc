@@ -57,6 +57,8 @@ export const createUser = async (userData, createdBy = null) => {
       userPermissions = ['all', 'super_admin', 'system_config', 'user_management', 'data_export', 'api_access', 'audit_logs']
     } else if (role === 'admin') {
       userPermissions = ['leads', 'quotes', 'bookings', 'reports', 'user_management']
+    } else if (role === 'sales') {
+      userPermissions = ['leads', 'quotes', 'bookings', 'reports']
     } else if (role === 'caller') {
       userPermissions = ['leads', 'quotes', 'bookings']
     }
@@ -222,6 +224,16 @@ export const updateUser = async (id, updates) => {
   `, updateValues)
   
   return await getUserById(id)
+}
+
+// Update user password
+export const updateUserPassword = async (userId, newPassword) => {
+  const hashedPassword = await hashPassword(newPassword)
+  await execute(
+    'UPDATE users SET password = ?, updated_at = NOW() WHERE id = ?',
+    [hashedPassword, userId]
+  )
+  return true
 }
 
 // Delete user

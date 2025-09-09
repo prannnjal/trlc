@@ -7,6 +7,7 @@ import RecentLeads from './RecentLeads'
 import RevenueChart from './RevenueChart'
 import LeadStatusChart from './LeadStatusChart'
 import SuperUserDashboard from './SuperUserDashboard'
+import AdminDashboard from './AdminDashboard'
 import { 
   UserGroupIcon, 
   CurrencyDollarIcon, 
@@ -37,6 +38,11 @@ export default function DashboardOverview() {
   // If user is a super user, show the super user dashboard
   if (isSuperUser()) {
     return <SuperUserDashboard />
+  }
+
+  // If user is an admin, show the admin dashboard
+  if (user?.role === 'admin') {
+    return <AdminDashboard />
   }
 
   const kpiData = [

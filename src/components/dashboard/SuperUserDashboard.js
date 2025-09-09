@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import { useRouter } from 'next/navigation'
 import { 
   ShieldCheckIcon,
   UserGroupIcon,
@@ -10,11 +11,13 @@ import {
   CircleStackIcon,
   ExclamationTriangleIcon,
   CheckCircleIcon,
-  ClockIcon
+  ClockIcon,
+  PlusIcon
 } from '@heroicons/react/24/outline'
 
 export default function SuperUserDashboard() {
   const { user } = useAuth()
+  const router = useRouter()
   const [systemStats, setSystemStats] = useState({
     totalUsers: 0,
     activeUsers: 0,
@@ -40,6 +43,10 @@ export default function SuperUserDashboard() {
     }
     setSystemStats(mockSystemStats)
   }, [])
+
+  const handleCreateAgent = () => {
+    router.push('/system/users')
+  }
 
   const systemHealthItems = [
     {
@@ -75,10 +82,11 @@ export default function SuperUserDashboard() {
   const quickActions = [
     {
       title: 'User Management',
-      description: 'Manage all users and permissions',
+      description: 'Create and manage all users and permissions',
       icon: UserGroupIcon,
       action: 'Manage Users',
-      color: 'bg-blue-500'
+      color: 'bg-blue-500',
+      onClick: handleCreateAgent
     },
     {
       title: 'System Configuration',
@@ -122,19 +130,35 @@ export default function SuperUserDashboard() {
     <div className="space-y-6">
       {/* Super User Header */}
       <div className="bg-gradient-to-r from-red-600 to-red-700 rounded-lg p-6 text-white">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold mb-2">
-              🚀 Super Administrator Dashboard
-            </h1>
-            <p className="text-red-100">
-              Welcome, {user?.name}! You have full system access and super admin privileges.
-            </p>
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:space-x-6 space-y-4 lg:space-y-0">
+            <div>
+              <h1 className="text-2xl font-bold mb-2">
+                {user?.role === 'super' ? '🚀 Super Administrator Dashboard' : '👑 Administrator Dashboard'}
+              </h1>
+              <p className="text-red-100">
+                {user?.role === 'super' 
+                  ? `Welcome, ${user?.name}! You have full system access and super admin privileges.`
+                  : `Welcome, ${user?.name}! You have admin access to manage your organization.`
+                }
+              </p>
+            </div>
+            <div className="flex-shrink-0">
+              <button
+                onClick={handleCreateAgent}
+                className="bg-white text-red-600 hover:bg-red-50 px-6 py-3 rounded-lg font-semibold flex items-center space-x-2 transition-colors duration-200 shadow-lg hover:shadow-xl w-full lg:w-auto justify-center"
+              >
+                <PlusIcon className="h-5 w-5" />
+                <span>{user?.role === 'super' ? 'Create Agent' : 'Create Sales'}</span>
+              </button>
+            </div>
           </div>
-          <div className="text-right">
-            <div className="bg-red-500 bg-opacity-30 rounded-lg p-3">
-              <p className="text-sm font-medium">Super User</p>
-              <p className="text-xs text-red-200">Enhanced Privileges</p>
+          <div className="text-center lg:text-right">
+            <div className="bg-red-500 bg-opacity-30 rounded-lg p-3 inline-block">
+              <p className="text-sm font-medium">{user?.role === 'super' ? 'Super User' : 'Admin User'}</p>
+              <p className="text-xs text-red-200">
+                {user?.role === 'super' ? 'Enhanced Privileges' : 'Admin Privileges'}
+              </p>
             </div>
           </div>
         </div>
@@ -243,7 +267,10 @@ export default function SuperUserDashboard() {
               </div>
               <h4 className="font-medium text-gray-900 mb-2">{action.title}</h4>
               <p className="text-sm text-gray-600 mb-3">{action.description}</p>
-              <button className="w-full btn-primary text-sm">
+              <button 
+                onClick={action.onClick}
+                className="w-full btn-primary text-sm"
+              >
                 {action.action}
               </button>
             </div>

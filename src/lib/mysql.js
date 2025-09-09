@@ -1,4 +1,5 @@
 import mysql from 'mysql2/promise'
+import { runMigrations } from './migrate.js'
 
 // Database configuration
 const dbConfig = {
@@ -190,7 +191,7 @@ export const initializeTables = async () => {
         name VARCHAR(100) NOT NULL,
         email VARCHAR(100) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
-        role ENUM('super', 'admin', 'caller') NOT NULL DEFAULT 'caller',
+        role ENUM('super', 'admin', 'sales', 'caller') NOT NULL DEFAULT 'caller',
         permissions JSON,
         avatar VARCHAR(255),
         is_active BOOLEAN DEFAULT TRUE,
@@ -349,6 +350,10 @@ export const initializeTables = async () => {
     `)
     
     console.log('✅ Database tables initialized successfully')
+    
+    // Run migrations
+    await runMigrations()
+    
     return true
   } catch (error) {
     console.error('❌ Error initializing tables:', error)

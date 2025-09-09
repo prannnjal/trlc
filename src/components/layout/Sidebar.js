@@ -139,6 +139,16 @@ const getNavigationItems = (isSuperUser) => {
         { name: 'Integrations', href: '/settings/integrations' }
       ]
     })
+    
+    // Add user management for admins
+    if (!isSuperUser) {
+      baseItems.push({
+        name: 'User Management',
+        href: '/system/users',
+        icon: UserGroupIcon,
+        permission: 'admin'
+      })
+    }
   }
 
   return baseItems
