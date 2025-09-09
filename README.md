@@ -98,23 +98,20 @@ A comprehensive Customer Relationship Management (CRM) software built specifical
 
 ## 🔐 Demo Credentials
 
-### 🚀 Super User Access
+### 🚀 SUPER USER
 - **Email**: `super@travelcrm.com`
 - **Password**: `super123`
-- **Permissions**: Full system access + Super admin privileges
-- **Features**: System monitoring, Enhanced security, Data management, Audit logs
+- **Full system access + Super admin privileges**
 
-### 👑 Admin Access
+### 👑 ADMIN
 - **Email**: `admin@travelcrm.com`
 - **Password**: `admin123`
-- **Permissions**: Full system access
-- **Features**: Standard admin capabilities
+- **Full system access**
 
-### 💼 Sales Access
+### 💼 SALES
 - **Email**: `sales@travelcrm.com`
 - **Password**: `sales123`
-- **Permissions**: Leads, quotes, bookings, reports
-- **Features**: Sales-focused operations
+- **Limited access (leads, quotes, bookings, reports)**
 
 ## 📱 Sample Workflow: From Lead to Trip
 
@@ -211,5 +208,6 @@ For support and questions, please contact the development team or create an issu
 **Built with ❤️ for the travel industry**
 
 **🚀 Now with Super User capabilities for enterprise-level management!**
-#   t r l c  
+#   t r l c 
+ 
  

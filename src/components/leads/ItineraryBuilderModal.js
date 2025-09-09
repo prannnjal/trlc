@@ -2,8 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { XMarkIcon, PlusIcon, TrashIcon, CalendarIcon, MapPinIcon, HomeIcon, TruckIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline'
+import { useNotification } from '../ui/Notification'
+import Notification from '../ui/Notification'
 
 export default function ItineraryBuilderModal({ lead, onClose, onSave }) {
+  const { notification, showError, hideNotification } = useNotification()
+  
   const [itinerary, setItinerary] = useState({
     // Trip Overview
     tripName: '',
@@ -167,7 +171,11 @@ export default function ItineraryBuilderModal({ lead, onClose, onSave }) {
       })
       
       if (hasOverlap) {
-        alert('This hotel overlaps with an existing hotel booking. Please choose different dates.')
+        showError(
+          'Date Conflict',
+          'This hotel overlaps with an existing hotel booking. Please choose different dates from the available slots.',
+          6000
+        )
         return
       }
       
@@ -651,14 +659,18 @@ export default function ItineraryBuilderModal({ lead, onClose, onSave }) {
                       </div>
                     </div>
                   </div>
-                  <input
-                    type="number"
-                    placeholder="Price per night"
-                    value={newHotel.price}
-                    onChange={(e) => setNewHotel(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
-                    className="input-field"
-                    step="0.01"
-                  />
+                  <div>
+                    <input
+                      type="number"
+                      placeholder="0"
+                      value={newHotel.price === 0 ? '' : newHotel.price}
+                      onChange={(e) => setNewHotel(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
+                      onFocus={(e) => e.target.value === '0' && (e.target.value = '')}
+                      className="input-field w-24"
+                      step="0.01"
+                    />
+                    <label className="text-xs text-gray-500">Amount</label>
+                  </div>
                 </div>
                 <div className="mt-4">
                   <input
@@ -1096,6 +1108,16 @@ export default function ItineraryBuilderModal({ lead, onClose, onSave }) {
           </div>
         </div>
       </div>
+      
+      {/* Custom Notification */}
+      <Notification
+        show={notification.show}
+        onClose={hideNotification}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+        duration={notification.duration}
+      />
     </div>
   )
 }

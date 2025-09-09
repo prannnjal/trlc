@@ -44,51 +44,6 @@ export default function HomePage() {
           <LoginForm />
         </div>
         
-        <div className="text-center mt-6 text-sm text-gray-500">
-          <p className="font-semibold text-gray-700 mb-3">Demo Credentials:</p>
-          
-          {/* Super User */}
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
-            <p className="font-bold text-red-800 text-sm">🚀 SUPER USER</p>
-            <p className="text-red-700">
-              <strong>Email:</strong> super@travelcrm.com
-            </p>
-            <p className="text-red-700">
-              <strong>Password:</strong> super123
-            </p>
-            <p className="text-xs text-red-600 mt-1">
-              Full system access + Super admin privileges
-            </p>
-          </div>
-          
-          {/* Admin User */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
-            <p className="font-bold text-blue-800 text-sm">👑 ADMIN</p>
-            <p className="text-blue-700">
-              <strong>Email:</strong> admin@travelcrm.com
-            </p>
-            <p className="text-blue-700">
-              <strong>Password:</strong> admin123
-            </p>
-            <p className="text-xs text-blue-600 mt-1">
-              Full system access
-            </p>
-          </div>
-          
-          {/* Sales User */}
-          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-            <p className="font-bold text-green-800 text-sm">💼 SALES</p>
-            <p className="text-green-700">
-              <strong>Email:</strong> sales@travelcrm.com
-            </p>
-            <p className="text-green-700">
-              <strong>Password:</strong> sales123
-            </p>
-            <p className="text-xs text-green-600 mt-1">
-              Limited access (leads, quotes, bookings, reports)
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   )
