@@ -135,6 +135,21 @@ export default function LeadsPage() {
     setShowCreateModal(false)
   }
 
+  const handleUpdateLead = (updatedLead) => {
+    setLeads(leads.map(lead => lead.id === updatedLead.id ? updatedLead : lead))
+    setFilteredLeads(filteredLeads.map(lead => lead.id === updatedLead.id ? updatedLead : lead))
+  }
+
+  const handleDeleteLead = (leadId) => {
+    setLeads(leads.filter(lead => lead.id !== leadId))
+    setFilteredLeads(filteredLeads.filter(lead => lead.id !== leadId))
+  }
+
+  const handleAddNote = (leadId, action, notes) => {
+    // In a real app, this would save to the database
+    console.log(`Added note for lead ${leadId}: ${action} - ${notes}`)
+  }
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -160,7 +175,7 @@ export default function LeadsPage() {
             className="btn-primary flex items-center"
           >
             <PlusIcon className="h-5 w-5 mr-2" />
-            Add New Lead
+            Add Lead
           </button>
         </div>
 
@@ -172,7 +187,12 @@ export default function LeadsPage() {
         />
 
         {/* Leads Table */}
-        <LeadsTable leads={filteredLeads} />
+        <LeadsTable 
+          leads={filteredLeads} 
+          onUpdateLead={handleUpdateLead}
+          onDeleteLead={handleDeleteLead}
+          onAddNote={handleAddNote}
+        />
 
         {/* Create Lead Modal */}
         {showCreateModal && (

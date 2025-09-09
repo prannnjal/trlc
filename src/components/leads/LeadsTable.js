@@ -6,8 +6,13 @@ import {
   PencilIcon, 
   TrashIcon,
   PhoneIcon,
-  EnvelopeIcon
+  MapIcon
 } from '@heroicons/react/24/outline'
+import ViewLeadModal from './ViewLeadModal'
+import EditLeadModal from './EditLeadModal'
+import DeleteConfirmModal from './DeleteConfirmModal'
+import QuickActionModal from './QuickActionModal'
+import ItineraryBuilderModal from './ItineraryBuilderModal'
 
 const getStatusBadge = (status) => {
   const statusConfig = {
@@ -26,8 +31,10 @@ const getStatusBadge = (status) => {
   )
 }
 
-export default function LeadsTable({ leads }) {
+export default function LeadsTable({ leads, onUpdateLead, onDeleteLead, onAddNote }) {
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' })
+  const [selectedLead, setSelectedLead] = useState(null)
+  const [modalType, setModalType] = useState(null) // 'view', 'edit', 'delete', 'call', 'itinerary'
 
   const handleSort = (key) => {
     let direction = 'asc'
@@ -35,6 +42,69 @@ export default function LeadsTable({ leads }) {
       direction = 'desc'
     }
     setSortConfig({ key, direction })
+  }
+
+  const handleViewLead = (lead) => {
+    setSelectedLead(lead)
+    setModalType('view')
+  }
+
+  const handleEditLead = (lead) => {
+    setSelectedLead(lead)
+    setModalType('edit')
+  }
+
+  const handleDeleteLead = (lead) => {
+    setSelectedLead(lead)
+    setModalType('delete')
+  }
+
+  const handleCallLead = (lead) => {
+    setSelectedLead(lead)
+    setModalType('call')
+  }
+
+  const handleItineraryBuilder = (lead) => {
+    setSelectedLead(lead)
+    setModalType('itinerary')
+  }
+
+  const handleCloseModal = () => {
+    setSelectedLead(null)
+    setModalType(null)
+  }
+
+  const handleUpdateLead = (updatedLead) => {
+    onUpdateLead(updatedLead)
+    handleCloseModal()
+  }
+
+  const handleDeleteConfirm = (leadId) => {
+    onDeleteLead(leadId)
+    handleCloseModal()
+  }
+
+  const handleStatusChange = (leadId, newStatus, newAssignee = null) => {
+    const lead = leads.find(l => l.id === leadId)
+    if (lead) {
+      const updatedLead = {
+        ...lead,
+        status: newStatus || lead.status,
+        assignedTo: newAssignee || lead.assignedTo,
+        updatedAt: new Date().toISOString().split('T')[0]
+      }
+      onUpdateLead(updatedLead)
+    }
+  }
+
+  const handleAddNote = (leadId, action, notes) => {
+    onAddNote(leadId, action, notes)
+  }
+
+  const handleSaveItinerary = (leadId, itinerary) => {
+    // In a real app, this would save to the database
+    console.log(`Saved itinerary for lead ${leadId}:`, itinerary)
+    onAddNote(leadId, 'itinerary', `Itinerary created: ${itinerary.tripName}`)
   }
 
   const sortedLeads = [...leads].sort((a, b) => {
@@ -118,20 +188,40 @@ export default function LeadsTable({ leads }) {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <div className="flex items-center space-x-2">
-                    <button className="text-primary-600 hover:text-primary-900 p-1">
+                    <button 
+                      onClick={() => handleViewLead(lead)}
+                      className="text-primary-600 hover:text-primary-900 p-1"
+                      title="View Lead"
+                    >
                       <EyeIcon className="h-4 w-4" />
                     </button>
-                    <button className="text-warning-600 hover:text-warning-900 p-1">
+                    <button 
+                      onClick={() => handleEditLead(lead)}
+                      className="text-warning-600 hover:text-warning-900 p-1"
+                      title="Edit Lead"
+                    >
                       <PencilIcon className="h-4 w-4" />
                     </button>
-                    <button className="text-danger-600 hover:text-danger-900 p-1">
+                    <button 
+                      onClick={() => handleDeleteLead(lead)}
+                      className="text-danger-600 hover:text-danger-900 p-1"
+                      title="Delete Lead"
+                    >
                       <TrashIcon className="h-4 w-4" />
                     </button>
-                    <button className="text-success-600 hover:text-success-900 p-1">
+                    <button 
+                      onClick={() => handleCallLead(lead)}
+                      className="text-success-600 hover:text-success-900 p-1"
+                      title="Call Lead"
+                    >
                       <PhoneIcon className="h-4 w-4" />
                     </button>
-                    <button className="text-info-600 hover:text-info-900 p-1">
-                      <EnvelopeIcon className="h-4 w-4" />
+                    <button 
+                      onClick={() => handleItineraryBuilder(lead)}
+                      className="text-info-600 hover:text-info-900 p-1"
+                      title="Build Itinerary"
+                    >
+                      <MapIcon className="h-4 w-4" />
                     </button>
                   </div>
                 </td>
@@ -145,6 +235,51 @@ export default function LeadsTable({ leads }) {
         <div className="text-center py-12">
           <div className="text-gray-500">No leads found</div>
         </div>
+      )}
+
+      {/* Modals */}
+      {selectedLead && modalType === 'view' && (
+        <ViewLeadModal
+          lead={selectedLead}
+          onClose={handleCloseModal}
+          onEdit={handleEditLead}
+          onCall={handleCallLead}
+          onItinerary={handleItineraryBuilder}
+          onStatusChange={handleStatusChange}
+        />
+      )}
+
+      {selectedLead && modalType === 'edit' && (
+        <EditLeadModal
+          lead={selectedLead}
+          onClose={handleCloseModal}
+          onSubmit={handleUpdateLead}
+        />
+      )}
+
+      {selectedLead && modalType === 'delete' && (
+        <DeleteConfirmModal
+          lead={selectedLead}
+          onClose={handleCloseModal}
+          onConfirm={handleDeleteConfirm}
+        />
+      )}
+
+      {selectedLead && modalType === 'call' && (
+        <QuickActionModal
+          lead={selectedLead}
+          action={modalType}
+          onClose={handleCloseModal}
+          onComplete={handleAddNote}
+        />
+      )}
+
+      {selectedLead && modalType === 'itinerary' && (
+        <ItineraryBuilderModal
+          lead={selectedLead}
+          onClose={handleCloseModal}
+          onSave={handleSaveItinerary}
+        />
       )}
     </div>
   )

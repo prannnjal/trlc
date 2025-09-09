@@ -130,9 +130,6 @@ export default function DashboardOverview() {
             Quick Actions
           </h3>
           <div className="space-y-3">
-            <button className="w-full btn-primary text-left">
-              + Create New Lead
-            </button>
             <button className="w-full btn-secondary text-left">
               + Generate Quote
             </button>

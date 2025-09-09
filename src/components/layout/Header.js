@@ -63,9 +63,6 @@ export default function Header() {
           
           {/* Quick Actions */}
           <div className="hidden md:flex items-center space-x-2">
-            <button className="btn-primary text-sm px-3 py-1.5">
-              + New Lead
-            </button>
             <button className="btn-secondary text-sm px-3 py-1.5">
               + New Quote
             </button>

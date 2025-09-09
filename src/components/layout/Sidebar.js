@@ -14,16 +14,7 @@ import {
   ArrowLeftOnRectangleIcon,
   Bars3Icon,
   ShieldCheckIcon,
-  CircleStackIcon,
-  DocumentTextIcon,
-  ChartPieIcon,
-  BanknotesIcon,
-  ClipboardDocumentListIcon,
-  PresentationChartLineIcon,
-  TruckIcon,
-  DocumentChartBarIcon,
-  PlusIcon,
-  CheckCircleIcon
+  CircleStackIcon
 } from '@heroicons/react/24/outline'
 
 const getNavigationItems = (isSuperUser) => {
@@ -41,7 +32,6 @@ const getNavigationItems = (isSuperUser) => {
       permission: 'leads',
       children: [
         { name: 'All Leads', href: '/leads' },
-        { name: 'New Leads', href: '/leads?status=new' },
         { name: 'In Progress', href: '/leads?status=in-progress' },
         { name: 'Converted', href: '/leads?status=converted' },
         { name: 'Quotes', href: '/quotes' }
@@ -60,67 +50,37 @@ const getNavigationItems = (isSuperUser) => {
       ]
     },
     {
-      name: 'Operations & Tours',
+      name: 'Operations',
       href: '/operations',
       icon: BuildingOfficeIcon,
       permission: 'operations',
       children: [
-        { name: 'Tour Management', href: '/operations/tours' },
-        { name: 'Active Tours', href: '/operations/active-tours' },
-        { name: 'Completed Tours', href: '/operations/completed-tours' },
         { name: 'Itinerary Builder', href: '/itineraries/builder' },
         { name: 'Supplier Management', href: '/suppliers' },
-        { name: 'Inventory Management', href: '/operations/inventory' },
-        { name: 'Vouchers', href: '/vouchers' },
-        { name: 'Quality Control', href: '/operations/quality' }
+        { name: 'Vouchers', href: '/vouchers' }
       ]
     },
     {
-      name: 'Accounting & Finance',
+      name: 'Accounting',
       href: '/accounting',
       icon: CurrencyDollarIcon,
       permission: 'accounting',
       children: [
-        { name: 'Financial Overview', href: '/accounting/overview' },
-        { name: 'Invoices', href: '/accounting/invoices' },
-        { name: 'Payments', href: '/accounting/payments' },
         { name: 'Receivables', href: '/accounting/receivables' },
         { name: 'Payables', href: '/accounting/payables' },
-        { name: 'Cash Flow', href: '/accounting/cashflow' },
-        { name: 'Profit & Loss', href: '/accounting/pnl' },
-        { name: 'Tax Reports', href: '/accounting/tax' }
+        { name: 'Invoices', href: '/accounting/invoices' },
+        { name: 'Payments', href: '/accounting/payments' }
       ]
     },
     {
-      name: 'Reports & Analytics',
+      name: 'Reports',
       href: '/reports',
       icon: ChartBarIcon,
       permission: 'reports',
       children: [
         { name: 'Sales Reports', href: '/reports/sales' },
         { name: 'Financial Reports', href: '/reports/financial' },
-        { name: 'Performance Analytics', href: '/reports/analytics' },
-        { name: 'Customer Analytics', href: '/reports/customers' },
-        { name: 'Operations Reports', href: '/reports/operations' },
-        { name: 'Booking Trends', href: '/reports/booking-trends' },
-        { name: 'Revenue Analysis', href: '/reports/revenue' },
-        { name: 'Team Performance', href: '/reports/team' }
-      ]
-    },
-    {
-      name: 'Data Analytics',
-      href: '/analytics',
-      icon: PresentationChartLineIcon,
-      permission: 'reports',
-      children: [
-        { name: 'Sales Performance', href: '/analytics/sales' },
-        { name: 'Customer Insights', href: '/analytics/customers' },
-        { name: 'Operations Metrics', href: '/analytics/operations' },
-        { name: 'Financial Analytics', href: '/analytics/financial' },
-        { name: 'Trend Analysis', href: '/analytics/trends' },
-        { name: 'Predictive Analytics', href: '/analytics/predictive' },
-        { name: 'Dashboard Builder', href: '/analytics/dashboard' },
-        { name: 'Custom Reports', href: '/analytics/custom' }
+        { name: 'Performance Analytics', href: '/reports/analytics' }
       ]
     }
   ]
@@ -179,54 +139,14 @@ const getNavigationItems = (isSuperUser) => {
       ]
     })
     
-    // Add admin-specific navigation items
+    // Add user management for admins
     if (!isSuperUser) {
-      baseItems.push(
-        {
-          name: 'User Management',
-          href: '/system/users',
-          icon: UserGroupIcon,
-          permission: 'admin',
-          children: [
-            { name: 'Create Sales Account', href: '/system/users/create-sales' },
-            { name: 'Manage Team', href: '/system/users/team' },
-            { name: 'User Permissions', href: '/system/users/permissions' },
-            { name: 'Team Performance', href: '/system/users/performance' }
-          ]
-        },
-        {
-          name: 'Business Intelligence',
-          href: '/business-intelligence',
-          icon: DocumentChartBarIcon,
-          permission: 'admin',
-          children: [
-            { name: 'Financial Overview', href: '/business-intelligence/financial' },
-            { name: 'Operations Dashboard', href: '/business-intelligence/operations' },
-            { name: 'Team Performance', href: '/business-intelligence/team' },
-            { name: 'Revenue Analytics', href: '/business-intelligence/revenue' },
-            { name: 'Customer Insights', href: '/business-intelligence/customers' },
-            { name: 'Tour Analytics', href: '/business-intelligence/tours' },
-            { name: 'Supplier Analytics', href: '/business-intelligence/suppliers' },
-            { name: 'Market Analysis', href: '/business-intelligence/market' }
-          ]
-        },
-        {
-          name: 'Quick Actions',
-          href: '/quick-actions',
-          icon: PlusIcon,
-          permission: 'admin',
-          children: [
-            { name: 'Create Sales Account', href: '/quick-actions/create-sales' },
-            { name: 'Add New Lead', href: '/quick-actions/add-lead' },
-            { name: 'Create Booking', href: '/quick-actions/create-booking' },
-            { name: 'Generate Invoice', href: '/quick-actions/generate-invoice' },
-            { name: 'Add Supplier', href: '/quick-actions/add-supplier' },
-            { name: 'Create Tour', href: '/quick-actions/create-tour' },
-            { name: 'Export Data', href: '/quick-actions/export-data' },
-            { name: 'Send Report', href: '/quick-actions/send-report' }
-          ]
-        }
-      )
+      baseItems.push({
+        name: 'User Management',
+        href: '/system/users',
+        icon: UserGroupIcon,
+        permission: 'admin'
+      })
     }
   }
 
