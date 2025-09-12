@@ -1,7 +1,7 @@
-const { NextResponse } = require('next/server')
-const db = require('@/lib/database.js')
-const { verifyToken } = require('@/lib/auth.js')
-const Joi = require('joi')
+import { NextResponse } from 'next/server'
+import { query, execute } from '@/lib/mysql'
+import { verifyToken } from '@/lib/auth'
+import Joi from 'joi'
 
 // Validation schema for lead update
 const updateLeadSchema = Joi.object({
@@ -42,7 +42,7 @@ async function GET(request, { params }) {
     
     const { id } = params
     
-    const lead = await db.queryOne(`
+    const lead = await queryOne(`
       SELECT l.*, 
              c.first_name, c.last_name, c.email, c.phone,
              u.name as assigned_to_name
@@ -109,7 +109,7 @@ async function PUT(request, { params }) {
     }
     
     // Check if lead exists
-    const existingLead = await db.queryOne('SELECT id FROM leads WHERE id = ?', [id])
+    const existingLead = await queryOne('SELECT id FROM leads WHERE id = ?', [id])
     
     if (!existingLead) {
       return NextResponse.json({
@@ -140,7 +140,7 @@ async function PUT(request, { params }) {
     updateValues.push(id)
     
     const updateQuery = `UPDATE leads SET ${updateFields.join(', ')} WHERE id = ?`
-    const result = await db.execute(updateQuery, updateValues)
+    const result = await execute(updateQuery, updateValues)
     
     if (result.affectedRows === 0) {
       return NextResponse.json({
@@ -150,7 +150,7 @@ async function PUT(request, { params }) {
     }
     
     // Get updated lead
-    const lead = await db.queryOne(`
+    const lead = await queryOne(`
       SELECT l.*, 
              c.first_name, c.last_name, c.email, c.phone,
              u.name as assigned_to_name
@@ -200,7 +200,7 @@ async function DELETE(request, { params }) {
     const { id } = params
     
     // Check if lead exists
-    const existingLead = await db.queryOne('SELECT id FROM leads WHERE id = ?', [id])
+    const existingLead = await queryOne('SELECT id FROM leads WHERE id = ?', [id])
     
     if (!existingLead) {
       return NextResponse.json({
@@ -210,7 +210,7 @@ async function DELETE(request, { params }) {
     }
     
     // Check if lead has associated quotes
-    const quotesCount = await db.queryOne('SELECT COUNT(*) as count FROM quotes WHERE lead_id = ?', [id])
+    const quotesCount = await queryOne('SELECT COUNT(*) as count FROM quotes WHERE lead_id = ?', [id])
     
     if (quotesCount.count > 0) {
       return NextResponse.json({
@@ -220,7 +220,7 @@ async function DELETE(request, { params }) {
     }
     
     // Delete lead
-    const result = await db.execute('DELETE FROM leads WHERE id = ?', [id])
+    const result = await execute('DELETE FROM leads WHERE id = ?', [id])
     
     if (result.affectedRows === 0) {
       return NextResponse.json({

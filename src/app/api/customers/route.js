@@ -1,5 +1,5 @@
-import db from '@/lib/database.js'
-import { verifyToken } from '@/lib/auth.js'
+import { query, execute } from '@/lib/mysql'
+import { verifyToken } from '@/lib/auth'
 import Joi from 'joi'
 
 // Validation schema for customer creation
@@ -68,7 +68,7 @@ export async function GET(request) {
     
     // Get total count
     const countQuery = `SELECT COUNT(*) as total FROM customers ${whereClause}`
-    const countResult = await db.queryOne(countQuery, queryParams)
+    const countResult = await queryOne(countQuery, queryParams)
     const total = countResult.total
     
     // Get customers with pagination
@@ -79,7 +79,7 @@ export async function GET(request) {
       ORDER BY ${sortBy} ${sortOrder}
       LIMIT ? OFFSET ?
     `
-    const customers = await db.query(customersQuery, [...queryParams, limit, offset])
+    const customers = await query(customersQuery, [...queryParams, limit, offset])
     
     return new Response(JSON.stringify({
       success: true,
@@ -153,7 +153,7 @@ export async function POST(request) {
     }
     
     // Create customer
-    const result = await db.execute(`
+    const result = await execute(`
       INSERT INTO customers (
         first_name, last_name, email, phone, address, city, state, country,
         postal_code, date_of_birth, passport_number, passport_expiry,
@@ -179,7 +179,7 @@ export async function POST(request) {
     ])
     
     // Get created customer
-    const customer = await db.queryOne('SELECT * FROM customers WHERE id = ?', [result.insertId])
+    const customer = await queryOne('SELECT * FROM customers WHERE id = ?', [result.insertId])
     
     return new Response(JSON.stringify({
       success: true,

@@ -1,7 +1,7 @@
-const { NextResponse } = require('next/server')
-const db = require('@/lib/database.js')
-const { verifyToken } = require('@/lib/auth.js')
-const Joi = require('joi')
+import { NextResponse } from 'next/server'
+import { query, execute } from '@/lib/mysql'
+import { verifyToken } from '@/lib/auth'
+import Joi from 'joi'
 
 // Validation schema for customer update
 const updateCustomerSchema = Joi.object({
@@ -46,7 +46,7 @@ async function GET(request, { params }) {
     
     const { id } = params
     
-    const customer = await db.queryOne(`
+    const customer = await queryOne(`
       SELECT c.*, u.name as created_by_name
       FROM customers c
       LEFT JOIN users u ON c.created_by = u.id
@@ -110,7 +110,7 @@ async function PUT(request, { params }) {
     }
     
     // Check if customer exists
-    const existingCustomer = await db.queryOne('SELECT id FROM customers WHERE id = ?', [id])
+    const existingCustomer = await queryOne('SELECT id FROM customers WHERE id = ?', [id])
     
     if (!existingCustomer) {
       return NextResponse.json({
@@ -141,7 +141,7 @@ async function PUT(request, { params }) {
     updateValues.push(id)
     
     const updateQuery = `UPDATE customers SET ${updateFields.join(', ')} WHERE id = ?`
-    const result = await db.execute(updateQuery, updateValues)
+    const result = await execute(updateQuery, updateValues)
     
     if (result.affectedRows === 0) {
       return NextResponse.json({
@@ -151,7 +151,7 @@ async function PUT(request, { params }) {
     }
     
     // Get updated customer
-    const customer = await db.queryOne('SELECT * FROM customers WHERE id = ?', [id])
+    const customer = await queryOne('SELECT * FROM customers WHERE id = ?', [id])
     
     return NextResponse.json({
       success: true,
@@ -193,7 +193,7 @@ async function DELETE(request, { params }) {
     const { id } = params
     
     // Check if customer exists
-    const existingCustomer = await db.queryOne('SELECT id FROM customers WHERE id = ?', [id])
+    const existingCustomer = await queryOne('SELECT id FROM customers WHERE id = ?', [id])
     
     if (!existingCustomer) {
       return NextResponse.json({
@@ -204,9 +204,9 @@ async function DELETE(request, { params }) {
     
     // Check if customer has associated leads, quotes, or bookings
     const [leadsCount, quotesCount, bookingsCount] = await Promise.all([
-      db.queryOne('SELECT COUNT(*) as count FROM leads WHERE customer_id = ?', [id]),
-      db.queryOne('SELECT COUNT(*) as count FROM quotes WHERE customer_id = ?', [id]),
-      db.queryOne('SELECT COUNT(*) as count FROM bookings WHERE customer_id = ?', [id])
+      queryOne('SELECT COUNT(*) as count FROM leads WHERE customer_id = ?', [id]),
+      queryOne('SELECT COUNT(*) as count FROM quotes WHERE customer_id = ?', [id]),
+      queryOne('SELECT COUNT(*) as count FROM bookings WHERE customer_id = ?', [id])
     ])
     
     if (leadsCount.count > 0 || quotesCount.count > 0 || bookingsCount.count > 0) {
@@ -217,7 +217,7 @@ async function DELETE(request, { params }) {
     }
     
     // Delete customer
-    const result = await db.execute('DELETE FROM customers WHERE id = ?', [id])
+    const result = await execute('DELETE FROM customers WHERE id = ?', [id])
     
     if (result.affectedRows === 0) {
       return NextResponse.json({

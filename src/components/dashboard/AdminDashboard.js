@@ -94,7 +94,7 @@ export default function AdminDashboard() {
     },
     {
       title: 'Total Revenue',
-      value: `$${stats.totalRevenue.toLocaleString()}`,
+      value: `₹${stats.totalRevenue.toLocaleString()}`,
       change: '+12%',
       changeType: 'positive',
       icon: CurrencyDollarIcon,
@@ -129,15 +129,15 @@ export default function AdminDashboard() {
     },
     {
       title: 'Pending Payments',
-      value: `$${stats.pendingPayments.toLocaleString()}`,
-      change: '-$2,500',
+      value: `₹${stats.pendingPayments.toLocaleString()}`,
+      change: '-₹2,08,000',
       changeType: 'positive',
       icon: BanknotesIcon,
       color: 'warning'
     },
     {
       title: 'Monthly Revenue',
-      value: `$${stats.monthlyRevenue.toLocaleString()}`,
+      value: `₹${stats.monthlyRevenue.toLocaleString()}`,
       change: '+15%',
       changeType: 'positive',
       icon: CurrencyDollarIcon,
@@ -180,7 +180,7 @@ export default function AdminDashboard() {
     },
     {
       title: 'Inventory Value',
-      value: `$${stats.inventoryValue.toLocaleString()}`,
+      value: `₹${stats.inventoryValue.toLocaleString()}`,
       change: '+5%',
       changeType: 'positive',
       icon: HomeIcon,
@@ -449,7 +449,7 @@ export default function AdminDashboard() {
             </div>
             <div className="flex justify-between items-center py-2 border-b border-gray-100">
               <span className="text-gray-600">Monthly Target</span>
-              <span className="font-semibold">${stats.monthlyTarget.toLocaleString()}</span>
+              <span className="font-semibold">₹{stats.monthlyTarget.toLocaleString()}</span>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-gray-100">
               <span className="text-gray-600">Target Progress</span>
@@ -488,7 +488,7 @@ export default function AdminDashboard() {
               <DocumentTextIcon className="h-5 w-5 text-yellow-600 mr-3" />
               <div>
                 <p className="text-sm font-medium text-yellow-800">Pending Invoices</p>
-                <p className="text-xs text-yellow-600">${stats.pendingPayments.toLocaleString()} outstanding</p>
+                <p className="text-xs text-yellow-600">₹{stats.pendingPayments.toLocaleString()} outstanding</p>
               </div>
             </div>
           </div>

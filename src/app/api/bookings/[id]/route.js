@@ -1,7 +1,7 @@
-const { NextResponse } = require('next/server')
-const db = require('@/lib/database.js')
-const { verifyToken } = require('@/lib/auth.js')
-const Joi = require('joi')
+import { NextResponse } from 'next/server'
+import { query, execute } from '@/lib/mysql'
+import { verifyToken } from '@/lib/auth'
+import Joi from 'joi'
 
 // Validation schema for booking update
 const updateBookingSchema = Joi.object({
@@ -40,7 +40,7 @@ async function GET(request, { params }) {
     
     const { id } = params
     
-    const booking = await db.queryOne(`
+    const booking = await queryOne(`
       SELECT b.*, 
              c.first_name, c.last_name, c.email, c.phone,
              q.title as quote_title, q.total_amount as quote_amount
@@ -107,7 +107,7 @@ async function PUT(request, { params }) {
     }
     
     // Check if booking exists
-    const existingBooking = await db.queryOne('SELECT id FROM bookings WHERE id = ?', [id])
+    const existingBooking = await queryOne('SELECT id FROM bookings WHERE id = ?', [id])
     
     if (!existingBooking) {
       return NextResponse.json({
@@ -138,7 +138,7 @@ async function PUT(request, { params }) {
     updateValues.push(id)
     
     const updateQuery = `UPDATE bookings SET ${updateFields.join(', ')} WHERE id = ?`
-    const result = await db.execute(updateQuery, updateValues)
+    const result = await execute(updateQuery, updateValues)
     
     if (result.affectedRows === 0) {
       return NextResponse.json({
@@ -148,7 +148,7 @@ async function PUT(request, { params }) {
     }
     
     // Get updated booking
-    const booking = await db.queryOne(`
+    const booking = await queryOne(`
       SELECT b.*, 
              c.first_name, c.last_name, c.email, c.phone,
              q.title as quote_title, q.total_amount as quote_amount
@@ -198,7 +198,7 @@ async function DELETE(request, { params }) {
     const { id } = params
     
     // Check if booking exists
-    const existingBooking = await db.queryOne('SELECT id FROM bookings WHERE id = ?', [id])
+    const existingBooking = await queryOne('SELECT id FROM bookings WHERE id = ?', [id])
     
     if (!existingBooking) {
       return NextResponse.json({
@@ -208,7 +208,7 @@ async function DELETE(request, { params }) {
     }
     
     // Check if booking has associated payments
-    const paymentsCount = await db.queryOne('SELECT COUNT(*) as count FROM payments WHERE booking_id = ?', [id])
+    const paymentsCount = await queryOne('SELECT COUNT(*) as count FROM payments WHERE booking_id = ?', [id])
     
     if (paymentsCount.count > 0) {
       return NextResponse.json({
@@ -218,7 +218,7 @@ async function DELETE(request, { params }) {
     }
     
     // Delete booking
-    const result = await db.execute('DELETE FROM bookings WHERE id = ?', [id])
+    const result = await execute('DELETE FROM bookings WHERE id = ?', [id])
     
     if (result.affectedRows === 0) {
       return NextResponse.json({

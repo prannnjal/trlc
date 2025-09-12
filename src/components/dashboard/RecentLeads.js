@@ -93,7 +93,7 @@ export default function RecentLeads() {
               <p>{lead.phone}</p>
               <p>Destination: {lead.destination}</p>
               <p>Travel Date: {lead.travelDate}</p>
-              <p>Value: ${lead.value.toLocaleString()}</p>
+              <p>Value: ₹{lead.value.toLocaleString()}</p>
             </div>
             
             <div className="flex items-center justify-between mt-2 text-xs text-gray-500">

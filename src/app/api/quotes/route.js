@@ -1,8 +1,8 @@
-const { NextResponse } = require('next/server')
-const db = require('@/lib/database.js')
-const { verifyToken } = require('@/lib/auth.js')
-const Joi = require('joi')
-const { v4: uuidv4 } = require('uuid')
+import { NextResponse } from 'next/server'
+import { query, execute } from '@/lib/mysql'
+import { verifyToken } from '@/lib/auth'
+import Joi from 'joi'
+import { v4 as uuidv4 } from 'uuid'
 
 // Validation schema for quote creation
 const quoteSchema = Joi.object({
@@ -11,7 +11,7 @@ const quoteSchema = Joi.object({
   title: Joi.string().min(2).max(200).required(),
   description: Joi.string().allow(''),
   total_amount: Joi.number().positive().required(),
-  currency: Joi.string().length(3).default('USD'),
+  currency: Joi.string().length(3).default('INR'),
   valid_until: Joi.date().allow(''),
   status: Joi.string().valid('draft', 'sent', 'accepted', 'rejected', 'expired').default('draft'),
   terms_conditions: Joi.string().allow(''),
@@ -32,7 +32,7 @@ async function GET(request) {
     // Get user from Authorization header
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({
+      return Response.json({
         success: false,
         message: 'Access denied. No token provided.'
       }, { status: 401 })
@@ -42,7 +42,7 @@ async function GET(request) {
     const decoded = await verifyToken(token)
     
     if (!decoded) {
-      return NextResponse.json({
+      return Response.json({
         success: false,
         message: 'Invalid token.'
       }, { status: 401 })
@@ -96,7 +96,7 @@ async function GET(request) {
     `
     const quotes = await db.query(quotesQuery, [...queryParams, limit, offset])
     
-    return NextResponse.json({
+    return Response.json({
       success: true,
       data: {
         quotes,
@@ -111,7 +111,7 @@ async function GET(request) {
     
   } catch (error) {
     console.error('Get quotes error:', error)
-    return NextResponse.json({
+    return Response.json({
       success: false,
       message: 'Internal server error'
     }, { status: 500 })
@@ -124,7 +124,7 @@ async function POST(request) {
     // Get user from Authorization header
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({
+      return Response.json({
         success: false,
         message: 'Access denied. No token provided.'
       }, { status: 401 })
@@ -134,7 +134,7 @@ async function POST(request) {
     const decoded = await verifyToken(token)
     
     if (!decoded) {
-      return NextResponse.json({
+      return Response.json({
         success: false,
         message: 'Invalid token.'
       }, { status: 401 })
@@ -145,7 +145,7 @@ async function POST(request) {
     // Validate request body
     const { error, value } = quoteSchema.validate(body)
     if (error) {
-      return NextResponse.json({
+      return Response.json({
         success: false,
         message: 'Validation error',
         errors: error.details.map(detail => detail.message)
@@ -186,7 +186,7 @@ async function POST(request) {
       WHERE q.id = ?
     `, [result.insertId])
     
-    return NextResponse.json({
+    return Response.json({
       success: true,
       message: 'Quote created successfully',
       data: { quote }
@@ -194,7 +194,7 @@ async function POST(request) {
     
   } catch (error) {
     console.error('Create quote error:', error)
-    return NextResponse.json({
+    return Response.json({
       success: false,
       message: 'Internal server error'
     }, { status: 500 })

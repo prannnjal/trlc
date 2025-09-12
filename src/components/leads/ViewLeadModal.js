@@ -138,7 +138,7 @@ export default function ViewLeadModal({ lead, onClose, onEdit, onCall, onItinera
                   <label className="text-sm font-medium text-gray-500">Estimated Value</label>
                   <p className="text-lg font-semibold text-gray-900 flex items-center">
                     <CurrencyDollarIcon className="h-4 w-4 mr-1 text-green-600" />
-                    ${lead.value.toLocaleString()}
+                    ₹{lead.value.toLocaleString()}
                   </p>
                 </div>
               </div>

@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { XMarkIcon, PlusIcon, TrashIcon, CalendarIcon, MapPinIcon, HomeIcon, TruckIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon, PlusIcon, TrashIcon, CalendarIcon, MapPinIcon, HomeIcon, TruckIcon, CurrencyDollarIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline'
 import { useNotification } from '../ui/Notification'
 import Notification from '../ui/Notification'
+import { generateItineraryPDF } from '@/lib/pdfGenerator'
 
 export default function ItineraryBuilderModal({ lead, onClose, onSave }) {
   const { notification, showError, hideNotification } = useNotification()
@@ -328,9 +329,114 @@ export default function ItineraryBuilderModal({ lead, onClose, onSave }) {
     calculateTotalCost()
   }, [itinerary.hotels, itinerary.activities, itinerary.transportation, itinerary.costBreakdown.meals, itinerary.costBreakdown.other])
 
-  const handleSave = () => {
-    onSave(lead.id, itinerary)
-    onClose()
+  const handleSave = async () => {
+    try {
+      // Validate required fields
+      if (!itinerary.tripName && !itinerary.destination) {
+        showError(
+          'Incomplete Itinerary',
+          'Please add at least a trip name or destination before saving.',
+          5000
+        )
+        return
+      }
+
+      // Prepare data for API
+      const itineraryData = {
+        lead_id: lead.id,
+        trip_name: itinerary.tripName,
+        destination: itinerary.destination,
+        start_date: itinerary.startDate,
+        end_date: itinerary.endDate,
+        duration: itinerary.duration,
+        nights: itinerary.nights,
+        travelers: itinerary.travelers,
+        adults: itinerary.adults,
+        children: itinerary.children,
+        hotels: itinerary.hotels,
+        activities: itinerary.activities,
+        transportation: itinerary.transportation,
+        total_cost: itinerary.totalCost,
+        cost_breakdown: itinerary.costBreakdown,
+        special_requests: itinerary.specialRequests,
+        notes: itinerary.notes,
+        status: 'draft'
+      }
+
+      // Save to database
+      const response = await fetch('/api/itineraries', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(itineraryData)
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        // Call the original onSave callback for any additional handling
+        onSave(lead.id, itinerary)
+        
+        // Show success notification
+        showSuccess(
+          'Itinerary Saved',
+          'Your itinerary has been saved successfully! You can view it in the Itineraries section.',
+          5000
+        )
+        
+        onClose()
+      } else {
+        showError(
+          'Save Failed',
+          result.error || 'Failed to save itinerary. Please try again.',
+          5000
+        )
+      }
+    } catch (error) {
+      console.error('Error saving itinerary:', error)
+      showError(
+        'Save Failed',
+        'An error occurred while saving the itinerary. Please try again.',
+        5000
+      )
+    }
+  }
+
+  const handleDownloadPDF = async () => {
+    try {
+      // Validate that we have minimum required data
+      if (!itinerary.tripName && !itinerary.destination) {
+        showError(
+          'Incomplete Itinerary',
+          'Please add at least a trip name or destination before downloading the PDF.',
+          5000
+        )
+        return
+      }
+
+      // Show loading state (you could add a loading spinner here)
+      await generateItineraryPDF(itinerary, lead)
+      
+      // Success notification
+      showSuccess(
+        'PDF Generated',
+        'Your itinerary has been downloaded as a PDF successfully!',
+        3000
+      )
+    } catch (error) {
+      showError(
+        'PDF Generation Failed',
+        error.message || 'Failed to generate PDF. Please try again.',
+        5000
+      )
+    }
+  }
+
+  const showSuccess = (title, message, duration = 3000) => {
+    // You can implement a success notification here
+    // For now, we'll use a simple alert
+    alert(`${title}: ${message}`)
   }
 
   const steps = [
@@ -350,12 +456,23 @@ export default function ItineraryBuilderModal({ lead, onClose, onSave }) {
             <h2 className="text-xl font-semibold text-gray-900">Itinerary Builder</h2>
             <p className="text-sm text-gray-600">Create detailed trip for {lead?.name}</p>
           </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
-          >
-            <XMarkIcon className="h-6 w-6" />
-          </button>
+          <div className="flex items-center space-x-3">
+            {/* PDF Download Button */}
+            <button
+              onClick={handleDownloadPDF}
+              className="flex items-center px-3 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200"
+              title="Download as PDF"
+            >
+              <DocumentArrowDownIcon className="h-4 w-4 mr-2" />
+              Download PDF
+            </button>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <XMarkIcon className="h-6 w-6" />
+            </button>
+          </div>
         </div>
 
         {/* Progress Steps */}
@@ -735,7 +852,7 @@ export default function ItineraryBuilderModal({ lead, onClose, onSave }) {
                                     </span>
                                   )}
                                 </span>
-                                <span className="font-medium text-green-600">${hotel.price}/night</span>
+                                <span className="font-medium text-green-600">₹{hotel.price}/night</span>
                               </div>
                             </div>
                             <button
@@ -837,7 +954,7 @@ export default function ItineraryBuilderModal({ lead, onClose, onSave }) {
                         <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
                           <span>{activity.date} at {activity.time}</span>
                           <span>{activity.duration}</span>
-                          <span className="font-medium text-green-600">${activity.price}</span>
+                          <span className="font-medium text-green-600">₹{activity.price}</span>
                         </div>
                       </div>
                       <button
@@ -936,7 +1053,7 @@ export default function ItineraryBuilderModal({ lead, onClose, onSave }) {
                         <p className="text-sm text-gray-600">{transport.from} → {transport.to}</p>
                         <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
                           <span>{transport.date} at {transport.time}</span>
-                          <span className="font-medium text-green-600">${transport.price}</span>
+                          <span className="font-medium text-green-600">₹{transport.price}</span>
                         </div>
                         {transport.details && (
                           <p className="text-xs text-gray-500 mt-1">{transport.details}</p>
@@ -974,7 +1091,7 @@ export default function ItineraryBuilderModal({ lead, onClose, onSave }) {
                   </div>
                   <div className="text-right">
                     <p className="text-lg font-bold text-primary-600">
-                      ${itinerary.totalCost.toFixed(2)}
+                      ₹{itinerary.totalCost.toFixed(2)}
                     </p>
                     <p className="text-sm text-primary-500">Total Cost</p>
                   </div>
@@ -987,28 +1104,28 @@ export default function ItineraryBuilderModal({ lead, onClose, onSave }) {
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span>Accommodation</span>
-                    <span className="font-medium">${itinerary.costBreakdown.accommodation.toFixed(2)}</span>
+                    <span className="font-medium">₹{itinerary.costBreakdown.accommodation.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Activities</span>
-                    <span className="font-medium">${itinerary.costBreakdown.activities.toFixed(2)}</span>
+                    <span className="font-medium">₹{itinerary.costBreakdown.activities.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Transportation</span>
-                    <span className="font-medium">${itinerary.costBreakdown.transportation.toFixed(2)}</span>
+                    <span className="font-medium">₹{itinerary.costBreakdown.transportation.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Meals</span>
-                    <span className="font-medium">${itinerary.costBreakdown.meals.toFixed(2)}</span>
+                    <span className="font-medium">₹{itinerary.costBreakdown.meals.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Other</span>
-                    <span className="font-medium">${itinerary.costBreakdown.other.toFixed(2)}</span>
+                    <span className="font-medium">₹{itinerary.costBreakdown.other.toFixed(2)}</span>
                   </div>
                   <div className="border-t border-gray-300 pt-3">
                     <div className="flex justify-between text-lg font-bold">
                       <span>Total Cost</span>
-                      <span className="text-primary-600">${itinerary.totalCost.toFixed(2)}</span>
+                      <span className="text-primary-600">₹{itinerary.totalCost.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
@@ -1074,6 +1191,25 @@ export default function ItineraryBuilderModal({ lead, onClose, onSave }) {
                   rows={3}
                   placeholder="Additional notes about the itinerary..."
                 />
+              </div>
+
+              {/* PDF Download Section */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium text-blue-900">Ready to Download?</h4>
+                    <p className="text-sm text-blue-700 mt-1">
+                      Generate a professional PDF itinerary for your customer
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleDownloadPDF}
+                    className="flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                  >
+                    <DocumentArrowDownIcon className="h-4 w-4 mr-2" />
+                    Download PDF
+                  </button>
+                </div>
               </div>
             </div>
           )}

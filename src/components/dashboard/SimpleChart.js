@@ -41,7 +41,7 @@ export default function SimpleChart({ data, type = 'bar' }) {
                     className="bg-blue-500 h-2 mr-2" 
                     style={{ width: `${(item.revenue / maxValue) * 200}px` }}
                   ></div>
-                  <span className="text-sm font-medium">${item.revenue.toLocaleString()}</span>
+                  <span className="text-sm font-medium">₹{item.revenue.toLocaleString()}</span>
                 </div>
               </div>
             ))}

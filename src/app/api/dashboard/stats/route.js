@@ -1,6 +1,6 @@
-const { NextResponse } = require('next/server')
-const db = require('@/lib/database.js')
-const { verifyToken } = require('@/lib/auth.js')
+import { NextResponse } from 'next/server'
+import { query } from '@/lib/mysql'
+import { verifyToken } from '@/lib/auth'
 
 // GET /api/dashboard/stats - Get dashboard statistics
 async function GET(request) {
@@ -8,7 +8,7 @@ async function GET(request) {
     // Get user from Authorization header
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({
+      return Response.json({
         success: false,
         message: 'Access denied. No token provided.'
       }, { status: 401 })
@@ -18,7 +18,7 @@ async function GET(request) {
     const decoded = await verifyToken(token)
     
     if (!decoded) {
-      return NextResponse.json({
+      return Response.json({
         success: false,
         message: 'Invalid token.'
       }, { status: 401 })
@@ -26,56 +26,62 @@ async function GET(request) {
     
     // Get basic counts
     const [
-      totalCustomers,
-      totalLeads,
-      totalQuotes,
-      totalBookings,
-      totalPayments
+      totalCustomersResult,
+      totalLeadsResult,
+      totalQuotesResult,
+      totalBookingsResult,
+      totalPaymentsResult
     ] = await Promise.all([
-      db.queryOne('SELECT COUNT(*) as count FROM customers'),
-      db.queryOne('SELECT COUNT(*) as count FROM leads'),
-      db.queryOne('SELECT COUNT(*) as count FROM quotes'),
-      db.queryOne('SELECT COUNT(*) as count FROM bookings'),
-      db.queryOne('SELECT COUNT(*) as count FROM payments')
+      query('SELECT COUNT(*) as count FROM customers'),
+      query('SELECT COUNT(*) as count FROM leads'),
+      query('SELECT COUNT(*) as count FROM quotes'),
+      query('SELECT COUNT(*) as count FROM bookings'),
+      query('SELECT COUNT(*) as count FROM payments')
     ])
     
+    const totalCustomers = totalCustomersResult[0]
+    const totalLeads = totalLeadsResult[0]
+    const totalQuotes = totalQuotesResult[0]
+    const totalBookings = totalBookingsResult[0]
+    const totalPayments = totalPaymentsResult[0]
+    
     // Get leads by status
-    const leadsByStatus = await db.query(`
+    const leadsByStatus = await query(`
       SELECT status, COUNT(*) as count 
       FROM leads 
       GROUP BY status
     `)
     
     // Get leads by priority
-    const leadsByPriority = await db.query(`
+    const leadsByPriority = await query(`
       SELECT priority, COUNT(*) as count 
       FROM leads 
       GROUP BY priority
     `)
     
     // Get quotes by status
-    const quotesByStatus = await db.query(`
+    const quotesByStatus = await query(`
       SELECT status, COUNT(*) as count 
       FROM quotes 
       GROUP BY status
     `)
     
     // Get bookings by status
-    const bookingsByStatus = await db.query(`
+    const bookingsByStatus = await query(`
       SELECT status, COUNT(*) as count 
       FROM bookings 
       GROUP BY status
     `)
     
     // Get payments by status
-    const paymentsByStatus = await db.query(`
+    const paymentsByStatus = await query(`
       SELECT status, COUNT(*) as count 
       FROM payments 
       GROUP BY status
     `)
     
     // Get revenue data (last 12 months)
-    const revenueData = await db.query(`
+    const revenueData = await query(`
       SELECT 
         DATE_FORMAT(created_at, '%Y-%m') as month,
         SUM(amount) as revenue
@@ -87,7 +93,7 @@ async function GET(request) {
     `)
     
     // Get recent activities
-    const recentActivities = await db.query(`
+    const recentActivities = await query(`
       SELECT 
         a.type,
         a.subject,
@@ -105,7 +111,7 @@ async function GET(request) {
     `)
     
     // Get top performing sources
-    const topSources = await db.query(`
+    const topSources = await query(`
       SELECT source, COUNT(*) as count
       FROM leads
       GROUP BY source
@@ -114,7 +120,7 @@ async function GET(request) {
     `)
     
     // Get conversion rates
-    const conversionRates = await db.query(`
+    const conversionRates = await query(`
       SELECT 
         'Lead to Quote' as stage,
         (SELECT COUNT(*) FROM quotes) / (SELECT COUNT(*) FROM leads) * 100 as rate
@@ -161,14 +167,14 @@ async function GET(request) {
       }
     }
     
-    return NextResponse.json({
+    return Response.json({
       success: true,
       data: { stats }
     })
     
   } catch (error) {
     console.error('Get dashboard stats error:', error)
-    return NextResponse.json({
+    return Response.json({
       success: false,
       message: 'Internal server error'
     }, { status: 500 })

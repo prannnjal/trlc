@@ -56,7 +56,7 @@ export default function DashboardOverview() {
     },
     {
       title: 'Total Revenue',
-      value: `$${stats.totalRevenue.toLocaleString()}`,
+      value: `₹${stats.totalRevenue.toLocaleString()}`,
       change: '+8.5%',
       changeType: 'positive',
       icon: CurrencyDollarIcon,

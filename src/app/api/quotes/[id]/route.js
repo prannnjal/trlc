@@ -1,7 +1,7 @@
-const { NextResponse } = require('next/server')
-const db = require('@/lib/database.js')
-const { verifyToken } = require('@/lib/auth.js')
-const Joi = require('joi')
+import { NextResponse } from 'next/server'
+import { query, execute } from '@/lib/mysql'
+import { verifyToken } from '@/lib/auth'
+import Joi from 'joi'
 
 // Validation schema for quote update
 const updateQuoteSchema = Joi.object({
@@ -39,7 +39,7 @@ async function GET(request, { params }) {
     
     const { id } = params
     
-    const quote = await db.queryOne(`
+    const quote = await queryOne(`
       SELECT q.*, 
              c.first_name, c.last_name, c.email, c.phone,
              l.source, l.destination
@@ -106,7 +106,7 @@ async function PUT(request, { params }) {
     }
     
     // Check if quote exists
-    const existingQuote = await db.queryOne('SELECT id FROM quotes WHERE id = ?', [id])
+    const existingQuote = await queryOne('SELECT id FROM quotes WHERE id = ?', [id])
     
     if (!existingQuote) {
       return NextResponse.json({
@@ -137,7 +137,7 @@ async function PUT(request, { params }) {
     updateValues.push(id)
     
     const updateQuery = `UPDATE quotes SET ${updateFields.join(', ')} WHERE id = ?`
-    const result = await db.execute(updateQuery, updateValues)
+    const result = await execute(updateQuery, updateValues)
     
     if (result.affectedRows === 0) {
       return NextResponse.json({
@@ -147,7 +147,7 @@ async function PUT(request, { params }) {
     }
     
     // Get updated quote
-    const quote = await db.queryOne(`
+    const quote = await queryOne(`
       SELECT q.*, 
              c.first_name, c.last_name, c.email, c.phone,
              l.source, l.destination
@@ -197,7 +197,7 @@ async function DELETE(request, { params }) {
     const { id } = params
     
     // Check if quote exists
-    const existingQuote = await db.queryOne('SELECT id FROM quotes WHERE id = ?', [id])
+    const existingQuote = await queryOne('SELECT id FROM quotes WHERE id = ?', [id])
     
     if (!existingQuote) {
       return NextResponse.json({
@@ -207,7 +207,7 @@ async function DELETE(request, { params }) {
     }
     
     // Check if quote has associated bookings
-    const bookingsCount = await db.queryOne('SELECT COUNT(*) as count FROM bookings WHERE quote_id = ?', [id])
+    const bookingsCount = await queryOne('SELECT COUNT(*) as count FROM bookings WHERE quote_id = ?', [id])
     
     if (bookingsCount.count > 0) {
       return NextResponse.json({
@@ -217,7 +217,7 @@ async function DELETE(request, { params }) {
     }
     
     // Delete quote
-    const result = await db.execute('DELETE FROM quotes WHERE id = ?', [id])
+    const result = await execute('DELETE FROM quotes WHERE id = ?', [id])
     
     if (result.affectedRows === 0) {
       return NextResponse.json({

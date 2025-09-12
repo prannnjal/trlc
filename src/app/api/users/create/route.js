@@ -18,7 +18,7 @@ export async function POST(request) {
     // Get user from Authorization header
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({
+      return Response.json({
         success: false,
         message: 'Access denied. No token provided.'
       }, { status: 401 })
@@ -28,7 +28,7 @@ export async function POST(request) {
     const decoded = await verifyToken(token)
 
     if (!decoded) {
-      return NextResponse.json({
+      return Response.json({
         success: false,
         message: 'Invalid token.'
       }, { status: 401 })
@@ -38,7 +38,7 @@ export async function POST(request) {
     const creator = await getUserById(creatorId)
 
     if (!creator) {
-      return NextResponse.json({
+      return Response.json({
         success: false,
         message: 'Creator user not found.'
       }, { status: 401 })
@@ -47,7 +47,7 @@ export async function POST(request) {
     // Validate request body
     const { error, value } = createUserSchema.validate(body)
     if (error) {
-      return NextResponse.json({
+      return Response.json({
         success: false,
         message: 'Validation error',
         errors: error.details.map(detail => detail.message)
@@ -56,14 +56,14 @@ export async function POST(request) {
 
     // Check if the creator has permission to create the requested role
     if (!canCreateUsers(creator)) {
-      return NextResponse.json({
+      return Response.json({
         success: false,
         message: 'Insufficient permissions to create users.'
       }, { status: 403 })
     }
 
     if (creator.role === 'admin' && value.role !== 'caller') {
-      return NextResponse.json({
+      return Response.json({
         success: false,
         message: 'Admins can only create caller users.'
       }, { status: 403 })
@@ -88,7 +88,7 @@ export async function POST(request) {
         permissions: JSON.stringify(permissions)
       }, creatorId) // Pass the creatorId
 
-      return NextResponse.json({
+      return Response.json({
         success: true,
         message: 'User created successfully',
         data: { user }
@@ -96,13 +96,13 @@ export async function POST(request) {
 
     } catch (createError) {
       if (createError.message.includes('Duplicate entry') && createError.message.includes('for key \'users.email\'')) {
-        return NextResponse.json({
+        return Response.json({
           success: false,
           message: 'User with this email already exists'
         }, { status: 409 })
       } else {
         console.error('Create user error:', createError)
-        return NextResponse.json({
+        return Response.json({
           success: false,
           message: createError.message || 'Failed to create user'
         }, { status: 500 })
@@ -111,7 +111,7 @@ export async function POST(request) {
 
   } catch (error) {
     console.error('Create user API error:', error)
-    return NextResponse.json({
+    return Response.json({
       success: false,
       message: 'Internal server error'
     }, { status: 500 })

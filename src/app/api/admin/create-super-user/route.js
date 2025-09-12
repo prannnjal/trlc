@@ -16,7 +16,7 @@ async function POST(request) {
     // Validate request body
     const { error, value } = superUserSchema.validate(body)
     if (error) {
-      return NextResponse.json({
+      return Response.json({
         success: false,
         message: 'Validation error',
         errors: error.details.map(detail => detail.message)
@@ -34,7 +34,7 @@ async function POST(request) {
       permissions: JSON.stringify(['all', 'super_admin', 'system_config', 'user_management', 'data_export', 'api_access', 'audit_logs'])
     }, null) // Super user is not created by anyone
     
-    return NextResponse.json({
+    return Response.json({
       success: true,
       message: 'Super user created successfully',
       data: {
@@ -50,13 +50,13 @@ async function POST(request) {
     console.error('Create super user error:', error)
     
     if (error.message.includes('Duplicate entry')) {
-      return NextResponse.json({
+      return Response.json({
         success: false,
         message: 'Email already exists'
       }, { status: 409 })
     }
     
-    return NextResponse.json({
+    return Response.json({
       success: false,
       message: 'Internal server error'
     }, { status: 500 })

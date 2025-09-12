@@ -1,7 +1,7 @@
-const { NextResponse } = require('next/server')
-const db = require('@/lib/database.js')
-const { verifyToken } = require('@/lib/auth.js')
-const Joi = require('joi')
+import { NextResponse } from 'next/server'
+import { query, execute } from '@/lib/mysql'
+import { verifyToken } from '@/lib/auth'
+import Joi from 'joi'
 
 // Validation schema for booking creation
 const bookingSchema = Joi.object({
@@ -22,7 +22,7 @@ async function GET(request) {
     // Get user from Authorization header
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({
+      return Response.json({
         success: false,
         message: 'Access denied. No token provided.'
       }, { status: 401 })
@@ -32,7 +32,7 @@ async function GET(request) {
     const decoded = await verifyToken(token)
     
     if (!decoded) {
-      return NextResponse.json({
+      return Response.json({
         success: false,
         message: 'Invalid token.'
       }, { status: 401 })
@@ -68,7 +68,7 @@ async function GET(request) {
       LEFT JOIN customers c ON b.customer_id = c.id
       ${whereClause}
     `
-    const countResult = await db.queryOne(countQuery, queryParams)
+    const countResult = await queryOne(countQuery, queryParams)
     const total = countResult.total
     
     // Get bookings with pagination
@@ -84,9 +84,9 @@ async function GET(request) {
       ORDER BY b.${sortBy} ${sortOrder}
       LIMIT ? OFFSET ?
     `
-    const bookings = await db.query(bookingsQuery, [...queryParams, limit, offset])
+    const bookings = await query(bookingsQuery, [...queryParams, limit, offset])
     
-    return NextResponse.json({
+    return Response.json({
       success: true,
       data: {
         bookings,
@@ -101,7 +101,7 @@ async function GET(request) {
     
   } catch (error) {
     console.error('Get bookings error:', error)
-    return NextResponse.json({
+    return Response.json({
       success: false,
       message: 'Internal server error'
     }, { status: 500 })
@@ -114,7 +114,7 @@ async function POST(request) {
     // Get user from Authorization header
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({
+      return Response.json({
         success: false,
         message: 'Access denied. No token provided.'
       }, { status: 401 })
@@ -124,7 +124,7 @@ async function POST(request) {
     const decoded = await verifyToken(token)
     
     if (!decoded) {
-      return NextResponse.json({
+      return Response.json({
         success: false,
         message: 'Invalid token.'
       }, { status: 401 })
@@ -135,7 +135,7 @@ async function POST(request) {
     // Validate request body
     const { error, value } = bookingSchema.validate(body)
     if (error) {
-      return NextResponse.json({
+      return Response.json({
         success: false,
         message: 'Validation error',
         errors: error.details.map(detail => detail.message)
@@ -146,7 +146,7 @@ async function POST(request) {
     const bookingRef = `BK-${Date.now()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`
     
     // Create booking
-    const result = await db.execute(`
+    const result = await execute(`
       INSERT INTO bookings (
         customer_id, quote_id, destination, departure_date, return_date,
         travelers_count, total_amount, status, notes, booking_reference, created_by
@@ -166,7 +166,7 @@ async function POST(request) {
     ])
     
     // Get created booking
-    const booking = await db.queryOne(`
+    const booking = await queryOne(`
       SELECT b.*, 
              c.first_name, c.last_name, c.email, c.phone,
              q.title as quote_title, q.total_amount as quote_amount
@@ -176,7 +176,7 @@ async function POST(request) {
       WHERE b.id = ?
     `, [result.insertId])
     
-    return NextResponse.json({
+    return Response.json({
       success: true,
       message: 'Booking created successfully',
       data: { booking }
@@ -184,7 +184,7 @@ async function POST(request) {
     
   } catch (error) {
     console.error('Create booking error:', error)
-    return NextResponse.json({
+    return Response.json({
       success: false,
       message: 'Internal server error'
     }, { status: 500 })

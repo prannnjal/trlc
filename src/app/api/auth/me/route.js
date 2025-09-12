@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server'
-import { verifyToken, getUserById } from '@/lib/auth.js'
+import { verifyToken, getUserById } from '@/lib/auth'
 
 export async function GET(request) {
+  
   try {
     // Get user from Authorization header
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({
+      return Response.json({
         success: false,
         message: 'Access denied. No token provided.'
       }, { status: 401 })
@@ -16,7 +17,7 @@ export async function GET(request) {
     const decoded = await verifyToken(token)
     
     if (!decoded) {
-      return NextResponse.json({
+      return Response.json({
         success: false,
         message: 'Invalid token.'
       }, { status: 401 })
@@ -25,14 +26,14 @@ export async function GET(request) {
     // Get user from database
     const user = await getUserById(decoded.id)
     if (!user) {
-      return NextResponse.json({
+      return Response.json({
         success: false,
         message: 'User not found.'
       }, { status: 401 })
     }
     
     if (!user.is_active) {
-      return NextResponse.json({
+      return Response.json({
         success: false,
         message: 'Account is deactivated.'
       }, { status: 401 })
@@ -53,14 +54,14 @@ export async function GET(request) {
       canViewAuditLogs: user.role === 'super'
     }
     
-    return NextResponse.json({
+    return Response.json({
       success: true,
       data: { user: userData }
     })
     
   } catch (error) {
     console.error('Get user error:', error)
-    return NextResponse.json({
+    return Response.json({
       success: false,
       message: 'Internal server error'
     }, { status: 500 })

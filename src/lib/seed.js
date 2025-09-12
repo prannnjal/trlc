@@ -148,7 +148,7 @@ const seedDatabase = async () => {
         travel_date: '2024-06-15',
         return_date: '2024-06-22',
         travelers_count: 2,
-        budget_range: '$3000-$5000',
+        budget_range: '₹2,50,000-₹4,00,000',
         status: 'new',
         priority: 'high',
         notes: 'Honeymoon trip',
@@ -162,7 +162,7 @@ const seedDatabase = async () => {
         travel_date: '2024-07-10',
         return_date: '2024-07-20',
         travelers_count: 1,
-        budget_range: '$2000-$4000',
+        budget_range: '₹1,50,000-₹3,00,000',
         status: 'contacted',
         priority: 'medium',
         notes: 'Business trip',
@@ -176,7 +176,7 @@ const seedDatabase = async () => {
         travel_date: '2024-08-05',
         return_date: '2024-08-12',
         travelers_count: 4,
-        budget_range: '$4000-$6000',
+        budget_range: '₹3,00,000-₹5,00,000',
         status: 'qualified',
         priority: 'medium',
         notes: 'Family vacation',
@@ -213,7 +213,7 @@ const seedDatabase = async () => {
         title: 'Paris Honeymoon Package',
         description: '7-day romantic getaway to Paris including flights, hotel, and city tours',
         total_amount: 4500.00,
-        currency: 'USD',
+        currency: 'INR',
         valid_until: '2024-05-15',
         status: 'sent',
         created_by: 1
@@ -224,7 +224,7 @@ const seedDatabase = async () => {
         title: 'Tokyo Business Trip',
         description: '10-day business trip to Tokyo with hotel and local transportation',
         total_amount: 3200.00,
-        currency: 'USD',
+        currency: 'INR',
         valid_until: '2024-06-10',
         status: 'draft',
         created_by: 2
@@ -235,7 +235,7 @@ const seedDatabase = async () => {
         title: 'Barcelona Family Vacation',
         description: '7-day family vacation to Barcelona with flights, hotel, and activities',
         total_amount: 5200.00,
-        currency: 'USD',
+        currency: 'INR',
         valid_until: '2024-07-05',
         status: 'accepted',
         created_by: 3
@@ -310,7 +310,7 @@ const seedDatabase = async () => {
       {
         booking_id: 1,
         amount: 2250.00,
-        currency: 'USD',
+        currency: 'INR',
         payment_method: 'credit_card',
         status: 'completed',
         transaction_id: 'TXN-001',
@@ -321,7 +321,7 @@ const seedDatabase = async () => {
       {
         booking_id: 1,
         amount: 2250.00,
-        currency: 'USD',
+        currency: 'INR',
         payment_method: 'credit_card',
         status: 'completed',
         transaction_id: 'TXN-002',
@@ -332,7 +332,7 @@ const seedDatabase = async () => {
       {
         booking_id: 2,
         amount: 2600.00,
-        currency: 'USD',
+        currency: 'INR',
         payment_method: 'bank_transfer',
         status: 'completed',
         transaction_id: 'TXN-003',
@@ -431,7 +431,7 @@ const seedDatabase = async () => {
       },
       {
         key: 'default_currency',
-        value: 'USD',
+        value: 'INR',
         type: 'string',
         description: 'Default currency for quotes and payments'
       },

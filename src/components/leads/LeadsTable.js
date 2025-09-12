@@ -1,18 +1,20 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { 
   EyeIcon, 
   PencilIcon, 
   TrashIcon,
   PhoneIcon,
-  MapIcon
+  MapIcon,
+  DocumentTextIcon
 } from '@heroicons/react/24/outline'
 import ViewLeadModal from './ViewLeadModal'
 import EditLeadModal from './EditLeadModal'
 import DeleteConfirmModal from './DeleteConfirmModal'
 import QuickActionModal from './QuickActionModal'
 import ItineraryBuilderModal from './ItineraryBuilderModal'
+import ViewItinerariesModal from './ViewItinerariesModal'
 
 const getStatusBadge = (status) => {
   const statusConfig = {
@@ -35,6 +37,7 @@ export default function LeadsTable({ leads, onUpdateLead, onDeleteLead, onAddNot
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' })
   const [selectedLead, setSelectedLead] = useState(null)
   const [modalType, setModalType] = useState(null) // 'view', 'edit', 'delete', 'call', 'itinerary'
+  const [itineraries, setItineraries] = useState({}) // leadId -> itineraries array
 
   const handleSort = (key) => {
     let direction = 'asc'
@@ -67,6 +70,11 @@ export default function LeadsTable({ leads, onUpdateLead, onDeleteLead, onAddNot
   const handleItineraryBuilder = (lead) => {
     setSelectedLead(lead)
     setModalType('itinerary')
+  }
+
+  const handleViewItineraries = (lead) => {
+    setSelectedLead(lead)
+    setModalType('view-itineraries')
   }
 
   const handleCloseModal = () => {
@@ -102,10 +110,40 @@ export default function LeadsTable({ leads, onUpdateLead, onDeleteLead, onAddNot
   }
 
   const handleSaveItinerary = (leadId, itinerary) => {
-    // In a real app, this would save to the database
-    console.log(`Saved itinerary for lead ${leadId}:`, itinerary)
-    onAddNote(leadId, 'itinerary', `Itinerary created: ${itinerary.tripName}`)
+    // Add a note about the itinerary creation
+    onAddNote(leadId, 'itinerary', `Itinerary created: ${itinerary.tripName || 'Untitled Trip'}`)
+    
+    // Update lead status to show progress
+    const lead = leads.find(l => l.id === leadId)
+    if (lead && lead.status === 'new') {
+      handleStatusChange(leadId, 'in-progress')
+    }
+    
+    // Refresh itineraries for this lead
+    fetchItinerariesForLead(leadId)
   }
+
+  const fetchItinerariesForLead = async (leadId) => {
+    try {
+      const response = await fetch(`/api/itineraries?lead_id=${leadId}`)
+      const result = await response.json()
+      if (result.success) {
+        setItineraries(prev => ({
+          ...prev,
+          [leadId]: result.data
+        }))
+      }
+    } catch (error) {
+      console.error('Error fetching itineraries for lead:', error)
+    }
+  }
+
+  // Fetch itineraries for all leads on component mount
+  useEffect(() => {
+    leads.forEach(lead => {
+      fetchItinerariesForLead(lead.id)
+    })
+  }, [leads])
 
   const sortedLeads = [...leads].sort((a, b) => {
     if (!sortConfig.key) return 0
@@ -145,6 +183,9 @@ export default function LeadsTable({ leads, onUpdateLead, onDeleteLead, onAddNot
               <SortableHeader sortKey="travelDate">Travel Date</SortableHeader>
               <SortableHeader sortKey="status">Status</SortableHeader>
               <SortableHeader sortKey="value">Value</SortableHeader>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Itinerary
+              </th>
               <SortableHeader sortKey="source">Source</SortableHeader>
               <SortableHeader sortKey="assignedTo">Assigned To</SortableHeader>
               <SortableHeader sortKey="createdAt">Created</SortableHeader>
@@ -174,7 +215,33 @@ export default function LeadsTable({ leads, onUpdateLead, onDeleteLead, onAddNot
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-gray-900">
-                    ${lead.value.toLocaleString()}
+                    ₹{lead.value.toLocaleString()}
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900">
+                    {itineraries[lead.id] && itineraries[lead.id].length > 0 ? (
+                      <div className="space-y-1">
+                        {itineraries[lead.id].slice(0, 2).map((itinerary) => (
+                          <div key={itinerary.id} className="flex items-center space-x-2">
+                            <DocumentTextIcon className="h-4 w-4 text-blue-500" />
+                            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                              {itinerary.trip_name || 'Untitled Trip'}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              ₹{parseFloat(itinerary.total_cost || 0).toLocaleString()}
+                            </span>
+                          </div>
+                        ))}
+                        {itineraries[lead.id].length > 2 && (
+                          <div className="text-xs text-gray-500">
+                            +{itineraries[lead.id].length - 2} more
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-400">No itineraries</span>
+                    )}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -223,6 +290,15 @@ export default function LeadsTable({ leads, onUpdateLead, onDeleteLead, onAddNot
                     >
                       <MapIcon className="h-4 w-4" />
                     </button>
+                    {itineraries[lead.id] && itineraries[lead.id].length > 0 && (
+                      <button 
+                        onClick={() => handleViewItineraries(lead)}
+                        className="text-blue-600 hover:text-blue-900 p-1"
+                        title="View Itineraries"
+                      >
+                        <DocumentTextIcon className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -279,6 +355,13 @@ export default function LeadsTable({ leads, onUpdateLead, onDeleteLead, onAddNot
           lead={selectedLead}
           onClose={handleCloseModal}
           onSave={handleSaveItinerary}
+        />
+      )}
+
+      {selectedLead && modalType === 'view-itineraries' && (
+        <ViewItinerariesModal
+          lead={selectedLead}
+          onClose={handleCloseModal}
         />
       )}
     </div>

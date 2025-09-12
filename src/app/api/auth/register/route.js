@@ -1,4 +1,4 @@
-import { createUser, getUserByEmail, generateToken } from '@/lib/auth.js'
+import { createUser, getUserByEmail, generateToken } from '@/lib/auth'
 import Joi from 'joi'
 
 // Validation schema

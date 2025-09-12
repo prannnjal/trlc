@@ -1,13 +1,13 @@
-const { NextResponse } = require('next/server')
-const db = require('@/lib/database.js')
-const { verifyToken } = require('@/lib/auth.js')
-const Joi = require('joi')
+import { NextResponse } from 'next/server'
+import { query, execute } from '@/lib/mysql'
+import { verifyToken } from '@/lib/auth'
+import Joi from 'joi'
 
 // Validation schema for payment creation
 const paymentSchema = Joi.object({
   booking_id: Joi.number().integer().required(),
   amount: Joi.number().positive().required(),
-  currency: Joi.string().length(3).default('USD'),
+  currency: Joi.string().length(3).default('INR'),
   payment_method: Joi.string().valid('credit_card', 'bank_transfer', 'cash', 'check', 'other').required(),
   status: Joi.string().valid('pending', 'completed', 'failed', 'refunded').default('pending'),
   transaction_id: Joi.string().allow(''),
@@ -21,7 +21,7 @@ async function GET(request) {
     // Get user from Authorization header
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({
+      return Response.json({
         success: false,
         message: 'Access denied. No token provided.'
       }, { status: 401 })
@@ -31,7 +31,7 @@ async function GET(request) {
     const decoded = await verifyToken(token)
     
     if (!decoded) {
-      return NextResponse.json({
+      return Response.json({
         success: false,
         message: 'Invalid token.'
       }, { status: 401 })
@@ -74,7 +74,7 @@ async function GET(request) {
       LEFT JOIN customers c ON b.customer_id = c.id
       ${whereClause}
     `
-    const countResult = await db.queryOne(countQuery, queryParams)
+    const countResult = await queryOne(countQuery, queryParams)
     const total = countResult.total
     
     // Get payments with pagination
@@ -90,9 +90,9 @@ async function GET(request) {
       ORDER BY p.${sortBy} ${sortOrder}
       LIMIT ? OFFSET ?
     `
-    const payments = await db.query(paymentsQuery, [...queryParams, limit, offset])
+    const payments = await query(paymentsQuery, [...queryParams, limit, offset])
     
-    return NextResponse.json({
+    return Response.json({
       success: true,
       data: {
         payments,
@@ -107,7 +107,7 @@ async function GET(request) {
     
   } catch (error) {
     console.error('Get payments error:', error)
-    return NextResponse.json({
+    return Response.json({
       success: false,
       message: 'Internal server error'
     }, { status: 500 })
@@ -120,7 +120,7 @@ async function POST(request) {
     // Get user from Authorization header
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({
+      return Response.json({
         success: false,
         message: 'Access denied. No token provided.'
       }, { status: 401 })
@@ -130,7 +130,7 @@ async function POST(request) {
     const decoded = await verifyToken(token)
     
     if (!decoded) {
-      return NextResponse.json({
+      return Response.json({
         success: false,
         message: 'Invalid token.'
       }, { status: 401 })
@@ -141,7 +141,7 @@ async function POST(request) {
     // Validate request body
     const { error, value } = paymentSchema.validate(body)
     if (error) {
-      return NextResponse.json({
+      return Response.json({
         success: false,
         message: 'Validation error',
         errors: error.details.map(detail => detail.message)
@@ -149,7 +149,7 @@ async function POST(request) {
     }
     
     // Create payment
-    const result = await db.execute(`
+    const result = await execute(`
       INSERT INTO payments (
         booking_id, amount, currency, payment_method, status,
         transaction_id, payment_date, notes, created_by
@@ -167,7 +167,7 @@ async function POST(request) {
     ])
     
     // Get created payment
-    const payment = await db.queryOne(`
+    const payment = await queryOne(`
       SELECT p.*, 
              b.booking_reference, b.destination,
              c.first_name, c.last_name, c.email, c.phone
@@ -177,7 +177,7 @@ async function POST(request) {
       WHERE p.id = ?
     `, [result.insertId])
     
-    return NextResponse.json({
+    return Response.json({
       success: true,
       message: 'Payment created successfully',
       data: { payment }
@@ -185,7 +185,7 @@ async function POST(request) {
     
   } catch (error) {
     console.error('Create payment error:', error)
-    return NextResponse.json({
+    return Response.json({
       success: false,
       message: 'Internal server error'
     }, { status: 500 })
