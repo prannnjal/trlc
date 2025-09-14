@@ -12,7 +12,9 @@
     "seed-db": "node scripts/init-db.cjs",
     "create-super-user": "node scripts/create-super-user.cjs",
     "create-user": "node scripts/create-user.cjs",
-    "list-users": "node scripts/list-users.cjs"
+    "list-users": "node scripts/list-users.cjs",
+    "migrate": "node scripts/migrate.cjs",
+    "test-google-sheets": "node scripts/test-google-sheets-import.cjs"
   },
   "dependencies": {
     "@headlessui/react": "^1.7.17",
@@ -23,6 +25,8 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
     "express-rate-limit": "^7.1.5",
+    "google-auth-library": "^10.3.0",
+    "googleapis": "^159.0.0",
     "helmet": "^7.1.0",
     "html2canvas": "^1.4.1",
     "joi": "^17.11.0",

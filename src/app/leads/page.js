@@ -6,7 +6,8 @@ import DashboardLayout from '@/components/layout/DashboardLayout'
 import LeadsTable from '@/components/leads/LeadsTable'
 import LeadFilters from '@/components/leads/LeadFilters'
 import CreateLeadModal from '@/components/leads/CreateLeadModal'
-import { PlusIcon } from '@heroicons/react/24/outline'
+import GoogleSheetsImportModal from '@/components/leads/GoogleSheetsImportModal'
+import { PlusIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline'
 
 export default function LeadsPage() {
   const { user } = useAuth()
@@ -19,6 +20,7 @@ export default function LeadsPage() {
   })
   const [searchQuery, setSearchQuery] = useState('')
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showImportModal, setShowImportModal] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -150,6 +152,14 @@ export default function LeadsPage() {
     console.log(`Added note for lead ${leadId}: ${action} - ${notes}`)
   }
 
+  const handleImportSuccess = (importData) => {
+    // Refresh leads after successful import
+    // In a real app, this would fetch fresh data from the API
+    console.log('Import successful:', importData)
+    // For now, we'll just close the modal
+    setShowImportModal(false)
+  }
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -170,13 +180,24 @@ export default function LeadsPage() {
             <p className="text-gray-600">Manage and track your sales leads</p>
           </div>
           
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="btn-primary flex items-center"
-          >
-            <PlusIcon className="h-5 w-5 mr-2" />
-            Add Lead
-          </button>
+          <div className="flex items-center space-x-3">
+            {(user?.role === 'admin' || user?.role === 'sales' || user?.permissions?.includes('leads:create')) && (
+              <button
+                onClick={() => setShowImportModal(true)}
+                className="btn-secondary flex items-center"
+              >
+                <DocumentArrowDownIcon className="h-5 w-5 mr-2" />
+                Import from Google Sheets
+              </button>
+            )}
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="btn-primary flex items-center"
+            >
+              <PlusIcon className="h-5 w-5 mr-2" />
+              Add Lead
+            </button>
+          </div>
         </div>
 
         {/* Filters and Search */}
@@ -199,6 +220,15 @@ export default function LeadsPage() {
           <CreateLeadModal
             onClose={() => setShowCreateModal(false)}
             onSubmit={handleCreateLead}
+          />
+        )}
+
+        {/* Google Sheets Import Modal */}
+        {showImportModal && (
+          <GoogleSheetsImportModal
+            isOpen={showImportModal}
+            onClose={() => setShowImportModal(false)}
+            onImportSuccess={handleImportSuccess}
           />
         )}
       </div>
