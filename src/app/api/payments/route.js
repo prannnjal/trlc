@@ -192,4 +192,4 @@ async function POST(request) {
   }
 }
 
-module.exports = { GET, POST }
+export { GET, POST }

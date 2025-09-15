@@ -1,6 +1,6 @@
-const { NextResponse } = require('next/server')
-const db = require('@/lib/database.js')
-const { verifyToken } = require('@/lib/auth.js')
+import { NextResponse } from 'next/server'
+import db from '@/lib/database'
+import { verifyToken } from '@/lib/auth'
 
 // GET /api/dashboard/stats - Get dashboard statistics
 async function GET(request) {
@@ -175,4 +175,4 @@ async function GET(request) {
   }
 }
 
-module.exports = { GET }
+export { GET }

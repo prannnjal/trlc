@@ -1,6 +1,6 @@
-const { NextResponse } = require('next/server')
-const { getUserById, updateUser, verifyToken } = require('@/lib/auth.js')
-const Joi = require('joi')
+import { NextResponse } from 'next/server'
+import { getUserById, updateUser, verifyToken } from '@/lib/auth'
+import Joi from 'joi'
 
 // Validation schema for user update
 const updateUserSchema = Joi.object({
@@ -275,4 +275,4 @@ async function DELETE(request, { params }) {
   }
 }
 
-module.exports = { GET, PUT, DELETE }
+export { GET, PUT, DELETE }

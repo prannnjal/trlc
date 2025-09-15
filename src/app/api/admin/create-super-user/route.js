@@ -1,6 +1,6 @@
-const { NextResponse } = require('next/server')
-const { createUser, hashPassword } = require('@/lib/auth.js')
-const Joi = require('joi')
+import { NextResponse } from 'next/server'
+import { createUser, hashPassword } from '@/lib/auth'
+import Joi from 'joi'
 
 // Validation schema for super user creation
 const superUserSchema = Joi.object({
@@ -63,4 +63,4 @@ async function POST(request) {
   }
 }
 
-module.exports = { POST }
+export { POST }

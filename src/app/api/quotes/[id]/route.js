@@ -240,4 +240,4 @@ async function DELETE(request, { params }) {
   }
 }
 
-module.exports = { GET, PUT, DELETE }
+export { GET, PUT, DELETE }

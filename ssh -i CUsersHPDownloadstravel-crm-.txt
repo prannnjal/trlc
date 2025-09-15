@@ -1,0 +1,2 @@
+>ssh -i "C:/Users/HP/Downloads/travel-crm-key.pem" ec2-user@43.205.103.183
+cd /var/www/travel-crm

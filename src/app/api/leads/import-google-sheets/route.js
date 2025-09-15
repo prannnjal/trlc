@@ -102,7 +102,7 @@ async function POST(request) {
 
     const importedLeads = []
     const skippedLeads = []
-    const errors = []
+    const importErrors = []
 
     for (const leadData of leads) {
       try {
@@ -186,7 +186,7 @@ async function POST(request) {
 
       } catch (leadError) {
         console.error('Error creating lead:', leadError)
-        errors.push({
+        importErrors.push({
           name: leadData.name,
           email: leadData.email,
           destination: leadData.destination,
@@ -204,7 +204,7 @@ async function POST(request) {
       'google_sheets',
       leads.length,
       importedLeads.length,
-      errors.length + skippedLeads.length
+      importErrors.length + skippedLeads.length
     ])
 
     return Response.json({
@@ -213,12 +213,12 @@ async function POST(request) {
       data: {
         imported: importedLeads,
         skipped: skippedLeads,
-        errors: errors,
+        errors: importErrors,
         summary: {
           total: leads.length,
           imported: importedLeads.length,
           skipped: skippedLeads.length,
-          errors: errors.length
+          errors: importErrors.length
         }
       }
     })
@@ -264,4 +264,4 @@ async function GET(request) {
   }
 }
 
-module.exports = { POST, GET }
+export { POST, GET }

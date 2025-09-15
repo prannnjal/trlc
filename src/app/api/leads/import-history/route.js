@@ -95,4 +95,4 @@ async function GET(request) {
   }
 }
 
-module.exports = { GET }
+export { GET }
