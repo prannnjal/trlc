@@ -24,7 +24,7 @@ if (fs.existsSync(envPath)) {
 }
 
 const mysql = require('mysql2/promise');
-const bcrypt = require('bcryptjs');
+const bcryptjs = require('bcryptjs');
 
 // Database configuration
 const dbConfig = {
@@ -334,7 +334,7 @@ async function seedDatabase() {
       {
         name: 'Super Administrator',
         email: 'super@travelcrm.com',
-        password: await bcrypt.hash('super123', 12),
+        password: await bcryptjs.hash('super123', 12),
         role: 'super',
         permissions: JSON.stringify(['all', 'super_admin', 'system_config', 'user_management', 'data_export', 'api_access', 'audit_logs']),
         avatar: 'https://ui-avatars.com/api/?name=Super&background=dc2626&color=fff',
@@ -357,7 +357,7 @@ async function seedDatabase() {
       {
         name: 'Admin User 1',
         email: 'admin1@travelcrm.com',
-        password: await bcrypt.hash('admin123', 12),
+        password: await bcryptjs.hash('admin123', 12),
         role: 'admin',
         permissions: JSON.stringify(['leads', 'quotes', 'bookings', 'reports', 'user_management']),
         avatar: 'https://ui-avatars.com/api/?name=Admin1&background=3b82f6&color=fff',
@@ -366,7 +366,7 @@ async function seedDatabase() {
       {
         name: 'Admin User 2',
         email: 'admin2@travelcrm.com',
-        password: await bcrypt.hash('admin123', 12),
+        password: await bcryptjs.hash('admin123', 12),
         role: 'admin',
         permissions: JSON.stringify(['leads', 'quotes', 'bookings', 'reports', 'user_management']),
         avatar: 'https://ui-avatars.com/api/?name=Admin2&background=3b82f6&color=fff',
@@ -392,7 +392,7 @@ async function seedDatabase() {
       {
         name: 'Caller User 1',
         email: 'caller1@travelcrm.com',
-        password: await bcrypt.hash('caller123', 12),
+        password: await bcryptjs.hash('caller123', 12),
         role: 'caller',
         permissions: JSON.stringify(['leads', 'quotes', 'bookings']),
         avatar: 'https://ui-avatars.com/api/?name=Caller1&background=10b981&color=fff',
@@ -401,7 +401,7 @@ async function seedDatabase() {
       {
         name: 'Caller User 2',
         email: 'caller2@travelcrm.com',
-        password: await bcrypt.hash('caller123', 12),
+        password: await bcryptjs.hash('caller123', 12),
         role: 'caller',
         permissions: JSON.stringify(['leads', 'quotes', 'bookings']),
         avatar: 'https://ui-avatars.com/api/?name=Caller2&background=10b981&color=fff',
@@ -410,7 +410,7 @@ async function seedDatabase() {
       {
         name: 'Caller User 3',
         email: 'caller3@travelcrm.com',
-        password: await bcrypt.hash('caller123', 12),
+        password: await bcryptjs.hash('caller123', 12),
         role: 'caller',
         permissions: JSON.stringify(['leads', 'quotes', 'bookings']),
         avatar: 'https://ui-avatars.com/api/?name=Caller3&background=10b981&color=fff',
