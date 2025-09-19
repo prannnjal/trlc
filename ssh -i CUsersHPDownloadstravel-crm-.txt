@@ -1,2 +1,5 @@
 >ssh -i "C:/Users/HP/Downloads/travel-crm-key.pem" ec2-user@43.205.103.183
 cd /var/www/travel-crm
+Sql-02June@2003
+
+CREATE USER 'travel_crm_user'@'localhost' IDENTIFIED BY '02June@2003';
