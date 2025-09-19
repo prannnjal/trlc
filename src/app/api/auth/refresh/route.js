@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server'
-import { verifyToken, getUserById } from '@/lib/auth'
+import { verifyToken, getUserById, generateToken } from '@/lib/auth'
 
-export async function GET(request) {
-  
+export async function POST(request) {
   try {
-    // Get user from Authorization header
+    // Get refresh token from Authorization header
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return Response.json({
@@ -19,8 +18,7 @@ export async function GET(request) {
     if (!decoded) {
       return Response.json({
         success: false,
-        message: 'Token expired or invalid. Please login again.',
-        code: 'TOKEN_EXPIRED'
+        message: 'Invalid or expired token.'
       }, { status: 401 })
     }
     
@@ -40,6 +38,9 @@ export async function GET(request) {
       }, { status: 401 })
     }
     
+    // Generate new token
+    const newToken = await generateToken(user)
+    
     // Prepare user data
     const userData = {
       id: user.id,
@@ -57,11 +58,14 @@ export async function GET(request) {
     
     return Response.json({
       success: true,
-      data: { user: userData }
+      data: { 
+        user: userData,
+        token: newToken
+      }
     })
     
   } catch (error) {
-    console.error('Get user error:', error)
+    console.error('Token refresh error:', error)
     return Response.json({
       success: false,
       message: 'Internal server error'

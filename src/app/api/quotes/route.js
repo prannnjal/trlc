@@ -78,7 +78,7 @@ async function GET(request) {
       LEFT JOIN customers c ON q.customer_id = c.id
       ${whereClause}
     `
-    const countResult = await db.queryOne(countQuery, queryParams)
+    const countResult = await queryOne(countQuery, queryParams)
     const total = countResult.total
     
     // Get quotes with pagination
@@ -94,7 +94,7 @@ async function GET(request) {
       ORDER BY q.${sortBy} ${sortOrder}
       LIMIT ? OFFSET ?
     `
-    const quotes = await db.query(quotesQuery, [...queryParams, limit, offset])
+    const quotes = await query(quotesQuery, [...queryParams, limit, offset])
     
     return Response.json({
       success: true,
@@ -156,7 +156,7 @@ async function POST(request) {
     const quoteRef = `QT-${Date.now()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`
     
     // Create quote
-    const result = await db.execute(`
+    const result = await execute(`
       INSERT INTO quotes (
         lead_id, customer_id, title, description, total_amount, currency,
         valid_until, status, terms_conditions, quote_reference, created_by
@@ -176,7 +176,7 @@ async function POST(request) {
     ])
     
     // Get created quote
-    const quote = await db.queryOne(`
+    const quote = await queryOne(`
       SELECT q.*, 
              c.first_name, c.last_name, c.email, c.phone,
              l.source, l.destination

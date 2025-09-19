@@ -38,6 +38,10 @@ export const verifyToken = async (token) => {
     const { payload } = await jwtVerify(token, JWT_SECRET)
     return payload
   } catch (error) {
+    if (error.code === 'ERR_JWT_EXPIRED') {
+      console.log('Token has expired')
+      return null
+    }
     console.error('Token verification failed:', error)
     return null
   }

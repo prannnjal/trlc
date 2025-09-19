@@ -33,12 +33,20 @@ export const AuthProvider = ({ children }) => {
             if (data.success) {
               setUser(data.data.user)
             } else {
+              // Token expired or invalid
               localStorage.removeItem('crm_token')
               localStorage.removeItem('crm_user')
+              setUser(null)
             }
           } else {
+            // Handle token expiration specifically
+            const data = await response.json()
+            if (data.code === 'TOKEN_EXPIRED') {
+              console.log('Token expired, redirecting to login')
+            }
             localStorage.removeItem('crm_token')
             localStorage.removeItem('crm_user')
+            setUser(null)
           }
         } catch (error) {
           console.error('Auth check failed:', error)
@@ -76,6 +84,35 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Login error:', error)
       return { success: false, message: 'Login failed. Please try again.' }
+    }
+  }
+
+  const refreshToken = async () => {
+    try {
+      const token = localStorage.getItem('crm_token')
+      if (!token) return false
+
+      const response = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          const { user, token: newToken } = data.data
+          setUser(user)
+          localStorage.setItem('crm_token', newToken)
+          localStorage.setItem('crm_user', JSON.stringify(user))
+          return true
+        }
+      }
+      return false
+    } catch (error) {
+      console.error('Token refresh failed:', error)
+      return false
     }
   }
 
@@ -130,6 +167,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     login,
     logout,
+    refreshToken,
     hasPermission,
     isSuperUser,
     canManageUsers,

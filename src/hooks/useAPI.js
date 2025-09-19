@@ -1,5 +1,51 @@
 import { useState, useEffect, useCallback } from 'react'
 import { handleAPIError } from '@/lib/api'
+import { useAuth } from '@/contexts/AuthContext'
+
+// Utility function for making authenticated API calls with automatic token refresh
+export const useAuthenticatedAPI = () => {
+  const { refreshToken } = useAuth()
+
+  const makeAuthenticatedRequest = useCallback(async (url, options = {}) => {
+    const token = localStorage.getItem('crm_token')
+    
+    const requestOptions = {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` }),
+        ...options.headers
+      }
+    }
+
+    try {
+      const response = await fetch(url, requestOptions)
+      
+      // If token expired, try to refresh and retry
+      if (response.status === 401) {
+        const refreshed = await refreshToken()
+        if (refreshed) {
+          const newToken = localStorage.getItem('crm_token')
+          const retryOptions = {
+            ...requestOptions,
+            headers: {
+              ...requestOptions.headers,
+              'Authorization': `Bearer ${newToken}`
+            }
+          }
+          return await fetch(url, retryOptions)
+        }
+      }
+      
+      return response
+    } catch (error) {
+      console.error('Authenticated API call failed:', error)
+      throw error
+    }
+  }, [refreshToken])
+
+  return { makeAuthenticatedRequest }
+}
 
 // Custom hook for API data fetching
 export const useAPI = (apiFunction, dependencies = [], options = {}) => {
@@ -177,5 +223,6 @@ export default {
   useAPI,
   useAPIMutation,
   usePaginatedAPI,
-  useRealtimeAPI
+  useRealtimeAPI,
+  useAuthenticatedAPI
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import db from '@/lib/database'
+import { query, queryOne } from '@/lib/mysql'
 import { verifyToken } from '@/lib/auth'
 
 // GET /api/dashboard/stats - Get dashboard statistics
@@ -32,50 +32,50 @@ async function GET(request) {
       totalBookings,
       totalPayments
     ] = await Promise.all([
-      db.queryOne('SELECT COUNT(*) as count FROM customers'),
-      db.queryOne('SELECT COUNT(*) as count FROM leads'),
-      db.queryOne('SELECT COUNT(*) as count FROM quotes'),
-      db.queryOne('SELECT COUNT(*) as count FROM bookings'),
-      db.queryOne('SELECT COUNT(*) as count FROM payments')
+      queryOne('SELECT COUNT(*) as count FROM customers'),
+      queryOne('SELECT COUNT(*) as count FROM leads'),
+      queryOne('SELECT COUNT(*) as count FROM quotes'),
+      queryOne('SELECT COUNT(*) as count FROM bookings'),
+      queryOne('SELECT COUNT(*) as count FROM payments')
     ])
     
     // Get leads by status
-    const leadsByStatus = await db.query(`
+    const leadsByStatus = await query(`
       SELECT status, COUNT(*) as count 
       FROM leads 
       GROUP BY status
     `)
     
     // Get leads by priority
-    const leadsByPriority = await db.query(`
+    const leadsByPriority = await query(`
       SELECT priority, COUNT(*) as count 
       FROM leads 
       GROUP BY priority
     `)
     
     // Get quotes by status
-    const quotesByStatus = await db.query(`
+    const quotesByStatus = await query(`
       SELECT status, COUNT(*) as count 
       FROM quotes 
       GROUP BY status
     `)
     
     // Get bookings by status
-    const bookingsByStatus = await db.query(`
+    const bookingsByStatus = await query(`
       SELECT status, COUNT(*) as count 
       FROM bookings 
       GROUP BY status
     `)
     
     // Get payments by status
-    const paymentsByStatus = await db.query(`
+    const paymentsByStatus = await query(`
       SELECT status, COUNT(*) as count 
       FROM payments 
       GROUP BY status
     `)
     
     // Get revenue data (last 12 months)
-    const revenueData = await db.query(`
+    const revenueData = await query(`
       SELECT 
         DATE_FORMAT(created_at, '%Y-%m') as month,
         SUM(amount) as revenue
@@ -87,7 +87,7 @@ async function GET(request) {
     `)
     
     // Get recent activities
-    const recentActivities = await db.query(`
+    const recentActivities = await query(`
       SELECT 
         a.type,
         a.subject,
@@ -105,7 +105,7 @@ async function GET(request) {
     `)
     
     // Get top performing sources
-    const topSources = await db.query(`
+    const topSources = await query(`
       SELECT source, COUNT(*) as count
       FROM leads
       GROUP BY source
@@ -114,7 +114,7 @@ async function GET(request) {
     `)
     
     // Get conversion rates
-    const conversionRates = await db.query(`
+    const conversionRates = await query(`
       SELECT 
         'Lead to Quote' as stage,
         (SELECT COUNT(*) FROM quotes) / (SELECT COUNT(*) FROM leads) * 100 as rate
